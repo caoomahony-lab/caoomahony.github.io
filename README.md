@@ -1,6 +1,4 @@
 # caoomahony.github.io
-Math, Art, Writing and Music 
-site/
   index.html
   styles.css
   math.html
