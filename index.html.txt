@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Caoomahony — workbench</title>
+  <meta name="description" content="A home for my creative and academic work."/>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <div class="brand">
+      <a href="/">Caoomahony</a>
+      <small class="muted">workbench</small>
+    </div>
+    <nav class="navlinks">
+      <a href="/">Home</a>
+      <a href="/math/">Math</a>
+      <a href="/writing/">Writing</a>
+      <a href="/music/">Music</a>
+      <a href="/art/">Art</a>
+      <a href="/about.html">About</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="hero">
+    <h1>One place for my creative and academic work.</h1>
+    <p class="muted">
+      Math, writing, music, and art — organized, accessible, and easy to share.
+    </p>
+  </section>
+
+  <section class="grid">
+
+    <a class="card" href="/math/">
+      <h3>Math</h3>
+      <p class="muted">Notes, PDFs, models, and ideas.</p>
+      <div class="tagrow">
+        <span class="tag">papers</span>
+        <span class="tag">notes</span>
+        <span class="tag">models</span>
+      </div>
+    </a>
+
+    <a class="card" href="/writing/">
+      <h3>Writing</h3>
+      <p class="muted">Essays, poems, fiction, and drafts.</p>
+      <div class="tagrow">
+        <span class="tag">essays</span>
+        <span class="tag">poetry</span>
+        <span class="tag">fiction</span>
+      </div>
+    </a>
+
+    <a class="card" href="/music/">
+      <h3>Music</h3>
+      <p class="muted">Tracks, theory notes, and works in progress.</p>
+      <div class="tagrow">
+        <span class="tag">tracks</span>
+        <span class="tag">theory</span>
+        <span class="tag">WIP</span>
+      </div>
+    </a>
+
+    <a class
