@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Math Post — Your Name</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="../index.html">Your Name</a>
+  <nav class="nav">
+    <a href="../math.html">← Back to Math</a>
+  </nav>
+</header>
+
+<main class="container">
+  <article class="card">
+    <h1>A Small Proof Sketch</h1>
+    <p class="meta">Jan 2026</p>
+
+    <p>Here’s an example equation: \(a^2 + b^2 = c^2\).</p>
+
+    <p>You can also do display math:</p>
+    \[
+      \sum_{k=1}^{n} k = \frac{n(n+1)}{2}.
+    \]
+  </article>
+</main>
+</body>
+</html>

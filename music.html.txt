@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Music — Your Name</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">Your Name</a>
+  <nav class="nav">
+    <a href="math.html">Math</a>
+    <a href="writing.html">Writing</a>
+    <a href="music.html">Music</a>
+    <a href="art.html">Art</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h1>Music</h1>
+    <p class="lede">Tracks, embeds, lyrics, chord progressions, notes.</p>
+  </section>
+
+  <article class="card">
+    <h3>Latest Track (embed)</h3>
+    <p class="meta">Swap the link for your own YouTube/SoundCloud/Bandcamp.</p>
+    <div style="position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.10);">
+      <iframe
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+        title="Track"
+        style="position:absolute;inset:0;width:100%;height:100%;border:0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
+    </div>
+  </article>
+
+  <div class="list">
+    <a class="item" href="posts/music-01.html">
+      <div>
+        <strong>Track Notes: Title</strong>
+        <div class="meta">Jan 2026</div>
+      </div>
+      <span>→</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

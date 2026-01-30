@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Math — Your Name</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- MathJax: type LaTeX like \(x^2\) or \[ ... \] -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">Your Name</a>
+  <nav class="nav">
+    <a href="math.html">Math</a>
+    <a href="writing.html">Writing</a>
+    <a href="music.html">Music</a>
+    <a href="art.html">Art</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h1>Math</h1>
+    <p class="lede">Proof sketches, explorations, PDFs.</p>
+  </section>
+
+  <div class="card">
+    <p class="meta">Example inline math: \( \int_0^1 x^2\,dx = \frac{1}{3} \)</p>
+  </div>
+
+  <div class="list">
+    <a class="item" href="posts/math-01.html">
+      <div>
+        <strong>Post: A Small Proof Sketch</strong>
+        <div class="meta">Jan 2026 • 6 min</div>
+      </div>
+      <span>→</span>
+    </a>
+
+    <a class="item" href="assets/math/worksheet.pdf">
+      <div>
+        <strong>PDF: Worksheet</strong>
+        <div class="meta">Download</div>
+      </div>
+      <span>↗</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

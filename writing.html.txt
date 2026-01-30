@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Writing — Your Name</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">Your Name</a>
+  <nav class="nav">
+    <a href="math.html">Math</a>
+    <a href="writing.html">Writing</a>
+    <a href="music.html">Music</a>
+    <a href="art.html">Art</a>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h1>Writing</h1>
+    <p class="lede">Essays, poems, drafts.</p>
+  </section>
+
+  <div class="list">
+    <a class="item" href="posts/writing-01.html">
+      <div>
+        <strong>Poem / Essay Title</strong>
+        <div class="meta">Jan 2026</div>
+      </div>
+      <span>→</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>
