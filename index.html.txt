@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <base href="/caoomahony.github.io/">
   <title>Caoomahony — workbench</title>
   <meta name="description" content="A home for my creative and academic work."/>
   <link rel="stylesheet" href="/styles.css"/>
@@ -69,3 +70,4 @@
     </a>
 
     <a class
+
