@@ -1,10 +1,9 @@
 {
-  "name": "fantasy-5-geometry-calculator",
-  "version": "1.0.0",
+  "name": "lottery-geometry-calculator-source",
+  "version": "2.0.0",
   "private": true,
-  "description": "Dependency-free Fantasy 5 geometry calculator",
+  "description": "Complete source export for the polished multi-game Floot Lottery Geometry Calculator",
   "scripts": {
-    "test": "node --test tests/calculator.test.mjs"
+    "test": "node --test tests/*.test.mjs"
   }
 }
-

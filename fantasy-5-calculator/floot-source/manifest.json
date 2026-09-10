@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "project": "Lottery Geometry Calculator",
+  "flootProjectId": "6b90f228-9b81-4511-9e6b-1c2f94e83ac9",
+  "flootProjectVersion": 1789009531390,
+  "flootCheckpointId": "aae1c03e-6226-4c32-b5df-3793c38b6cab",
+  "publishedUrl": "https://fantasy5-geometry.floot.app",
+  "exportedAt": "2026-09-10T03:15:00Z",
+  "verification": {
+    "flootTypecheck": "clean",
+    "flootSpecs": {
+      "filesPassed": 3,
+      "filesFailed": 0
+    },
+    "browserAcceptance": [
+      "Fantasy 5 exact D×G reference",
+      "Powerball canonical example",
+      "Mega Millions legal random range",
+      "fail-closed duplicate validation",
+      "production-origin console clean"
+    ]
+  },
+  "files": [
+    "floot-source/pages/_index.tsx",
+    "floot-source/pages/_index.module.css",
+    "floot-source/pages/_index.pageLayout.tsx",
+    "floot-source/helpers/fantasy5Geometry.tsx",
+    "floot-source/helpers/fantasy5Geometry.spec.tsx",
+    "floot-source/helpers/stateSpaceGeometry.tsx",
+    "floot-source/helpers/stateSpaceGeometry.spec.tsx",
+    "floot-source/components/Input.tsx",
+    "floot-source/components/Input.module.css",
+    "floot-source/components/Button.tsx",
+    "floot-source/components/Button.module.css",
+    "floot-source/components/Select.tsx",
+    "floot-source/components/Select.module.css",
+    "floot-source/base.css"
+  ]
+}

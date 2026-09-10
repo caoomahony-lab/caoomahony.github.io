@@ -1,30 +1,22 @@
-# Fantasy 5 Geometry Calculator
+# Lottery Geometry Calculator
 
-A dependency-free browser calculator for five distinct Fantasy 5 numbers from 1–42.
+The current polished application is live at **https://fantasy5-geometry.floot.app**.
 
-It sorts the ticket, computes the established D/G/H/L/C/C* geometry, maps the ticket to the 38×38 D/G grid, and compares its cell with the exhaustively enumerated 850,668-ticket universe.
+This repository now contains the complete source closure for that live Floot build under [`floot-source/`](./floot-source/README.md). It includes the page, responsive styling, imported UI components, scientific helpers, and tests. The earlier single-file `index.html` remains only as a recoverable legacy standalone snapshot; it is not the canonical implementation.
 
-## Run
+## Current capability
 
-Open `index.html` directly in a browser. No build step or server is required.
+- Fantasy 5, Powerball white balls, and Mega Millions white balls;
+- canonical state `(D, S, qH, qK, qT)`;
+- exact scale–translation base and range-conditioned tetrahedral q-space fiber;
+- exact positive-integer gap-composition and state counts;
+- certified exhaustive Fantasy 5 850,668-set / 38×38 D×G population map;
+- fail-closed input validation and responsive desktop/mobile layout.
 
-For a local HTTP server:
-
-```sh
-python3 -m http.server 8000
-```
-
-Then open `http://localhost:8000`.
-
-## Test
+## Verify the export contract
 
 ```sh
 npm test
 ```
 
-The test uses only Node.js built-ins and checks the preserved browser artifact, canonical universe constants, a uniform-gap control ticket, and fail-closed input validation.
-
-## Floot handoff
-
-Import the `fantasy-5-calculator` directory from `caoomahony-lab/caoomahony.github.io` on branch `main`. Treat `index.html` as the behavior and formula authority; improvements should preserve its existing calculations unless intentionally versioned.
-
+The full runtime/scientific tests execute in Floot. At the recorded export, all three Floot spec files passed and the project typecheck was clean. See [`floot-source/manifest.json`](./floot-source/manifest.json) for the exact Floot project version and checkpoint.
