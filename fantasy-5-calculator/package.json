@@ -1,0 +1,10 @@
+{
+  "name": "fantasy-5-geometry-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependency-free Fantasy 5 geometry calculator",
+  "scripts": {
+    "test": "node --test tests/calculator.test.mjs"
+  }
+}
+
