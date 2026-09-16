@@ -1,56 +1,25 @@
-import { mod12, pitchClassName } from "./pitch.js";
+import { mod12 } from "./pitch.js";
+import { SCALE_SYSTEMS, inferScaleCandidates as inferScaleCandidatesV2 } from "../inference/scales.js";
 
-export const SCALE_TEMPLATES = Object.freeze([
-  { name: "Major", intervals: [0, 2, 4, 5, 7, 9, 11] },
-  { name: "Lydian", intervals: [0, 2, 4, 6, 7, 9, 11] },
-  { name: "Mixolydian", intervals: [0, 2, 4, 5, 7, 9, 10] },
-  { name: "Dorian", intervals: [0, 2, 3, 5, 7, 9, 10] },
-  { name: "Natural minor", intervals: [0, 2, 3, 5, 7, 8, 10] },
-  { name: "Phrygian", intervals: [0, 1, 3, 5, 7, 8, 10] },
-  { name: "Locrian", intervals: [0, 1, 3, 5, 6, 8, 10] },
-  { name: "Harmonic minor", intervals: [0, 2, 3, 5, 7, 8, 11] }
-]);
+export const SCALE_TEMPLATES = Object.freeze(SCALE_SYSTEMS.map((system) => Object.freeze({
+  name: system.name,
+  intervals: system.intervals
+})));
 
-function softmax(values, temperature = 0.35) {
-  const max = Math.max(...values);
-  const exps = values.map((v) => Math.exp((v - max) / temperature));
-  const sum = exps.reduce((a, b) => a + b, 0) || 1;
-  return exps.map((v) => v / sum);
-}
-
+// Compatibility facade for the v0.1 visualizer. New code should consume
+// src/inference/scales.js and use support/relativeWeight terminology.
 export function inferScaleCandidates(activityRaw, limit = 5) {
-  const total = activityRaw.reduce((a, b) => a + b, 0);
-  if (total <= 1e-9) return [];
-
-  const candidates = [];
-  for (let root = 0; root < 12; root += 1) {
-    for (const template of SCALE_TEMPLATES) {
-      const pcs = template.intervals.map((interval) => mod12(root + interval));
-      const member = new Set(pcs);
-      let inside = 0;
-      let outside = 0;
-      for (let pc = 0; pc < 12; pc += 1) {
-        if (member.has(pc)) inside += activityRaw[pc] || 0;
-        else outside += activityRaw[pc] || 0;
-      }
-      const rootWeight = activityRaw[root] || 0;
-      const fifthWeight = activityRaw[mod12(root + 7)] || 0;
-      const score = (inside - 0.72 * outside + 0.18 * rootWeight + 0.06 * fifthWeight) / total;
-      candidates.push({
-        root,
-        rootName: pitchClassName(root),
-        scale: template.name,
-        label: `${pitchClassName(root)} ${template.name}`,
-        pcs,
-        score
-      });
-    }
-  }
-
-  candidates.sort((a, b) => b.score - a.score);
-  const top = candidates.slice(0, Math.max(limit, 1));
-  const confidences = softmax(top.map((c) => c.score));
-  return top.map((candidate, i) => ({ ...candidate, confidence: confidences[i] }));
+  return inferScaleCandidatesV2(activityRaw, { limit }).map((candidate) => ({
+    root: candidate.rootPc,
+    rootName: candidate.rootName,
+    scale: candidate.scale,
+    label: candidate.label,
+    pcs: candidate.pcs,
+    score: candidate.support,
+    support: candidate.support,
+    confidence: candidate.relativeWeight,
+    relativeWeight: candidate.relativeWeight
+  }));
 }
 
 export function crystallizationSupport({
