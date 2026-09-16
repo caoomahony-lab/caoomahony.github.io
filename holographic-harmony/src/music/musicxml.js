@@ -1,5 +1,6 @@
 import { pitchClassFromStepAlter, midiFromPitch, noteName } from "../theory/pitch.js";
 import { applyTempoMap, normalizeTempoEvents } from "./tempo-map.js";
+import { canonicalizeNoteEvents, NOTE_EVENT_SCHEMA_VERSION } from "../model/events.js";
 
 function childrenByTag(node, tag) {
   return Array.from(node.childNodes || []).filter((child) => child.nodeType === 1 && child.nodeName === tag);
@@ -54,7 +55,7 @@ function tieFlags(note) {
   return { tieStart, tieStop };
 }
 
-export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser) {
+export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser, options = {}) {
   if (!DOMParserImpl) throw new Error("DOMParser is unavailable in this environment");
   const doc = new DOMParserImpl().parseFromString(xmlText, "application/xml");
   const parserError = doc.getElementsByTagName?.("parsererror")?.[0];
@@ -66,6 +67,7 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser) {
   let globalEndQ = 0;
 
   partNodes.forEach((part, partIndex) => {
+    const partId = part.getAttribute?.("id") || String(partIndex + 1);
     let divisions = 1;
     let measureStartQ = 0;
     const measures = childrenByTag(part, "measure");
@@ -126,7 +128,9 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser) {
             const alter = numberOf(pitch, "alter", 0);
             const octave = numberOf(pitch, "octave", 4);
             rawNotes.push({
+              sourceOrdinal: rawNotes.length,
               partIndex,
+              partId,
               measureIndex: measureIndex + 1,
               measureNumber: measure.getAttribute?.("number") || String(measureIndex + 1),
               voice,
@@ -163,9 +167,13 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser) {
   const tempos = normalizeTempoEvents(tempoEvents);
   const notes = applyTempoMap(rawNotes, tempos);
   const durationSeconds = notes.reduce((max, n) => Math.max(max, n.onset + n.duration), 0);
+  const trackId = String(options.trackId || "musicxml");
+  const eventsV1 = canonicalizeNoteEvents(notes, { trackId, source: "musicxml" });
 
   return {
     notes,
+    eventsV1,
+    eventSchemaVersion: NOTE_EVENT_SCHEMA_VERSION,
     tempoEvents: tempos,
     durationSeconds,
     durationQuarterBeats: globalEndQ,
