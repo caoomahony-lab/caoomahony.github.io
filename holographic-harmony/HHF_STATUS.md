@@ -115,6 +115,37 @@ source events mutated:         no
 
 HHF-002 provides mathematically correct semitone transposition and center normalization. It does **not** yet claim full key-aware enharmonic respelling. Derived note names currently use a deterministic chromatic spelling policy while preserving `sourceSpelling`; later key/function rendering must choose musically appropriate spellings from key/system context instead of treating the temporary chromatic spelling as canonical theory.
 
+---
+
+## HHF-003 — Multi-resolution Analysis Windows
+
+Status: **ACCEPTED / CHECKPOINTED**
+
+Implemented in `src/analysis/windows.js`:
+
+- validated window specs for seconds, quarter-beats, and measures;
+- uniform, duration-overlap, and decay weighting modes;
+- canonical local/phrase/field defaults;
+- immutable window records containing canonical event references, indices, and weights;
+- a whole-piece global window helper;
+- zero-duration/grace event handling;
+- no alternate event or timing representation.
+
+Verification performed before checkpoint:
+
+```text
+npm test
+25 tests passed / 0 failed
+
+npm run build
+passed
+
+node --check src/analysis/windows.js
+passed
+```
+
+The window engine consumes `NoteEventV1` directly. Beat windows use retained quarter-beat coordinates; measure windows use canonical measure numbers; seconds windows use canonical onset/end times.
+
 ## Gate
 
-HHF-001 and HHF-002 are green checkpoints. HHF-003 must build analysis windows on the canonical event stream and must not introduce a second timing/event representation.
+HHF-001 through HHF-003 are green checkpoints. HHF-004 must compute pitch ecology from canonical events/windows and use the HHF-002 normalization engine rather than embedding another transposition implementation.
