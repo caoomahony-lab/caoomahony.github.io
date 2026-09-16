@@ -59,6 +59,62 @@ parts:               1
 
 The real score was used only as a private/local regression input and was not added to the public repository.
 
+---
+
+## HHF-002 — Transposition and Center Normalization
+
+Status: **ACCEPTED / CHECKPOINTED**
+
+Implemented in `src/theory/transposition.js`:
+
+- `transposePitchClass(pc, semitones)`;
+- `transposePitchSet(pcs, semitones)`;
+- `transposeEvents(events, semitones, options)`;
+- `rotateHistogram(histogram, semitones)`;
+- `normalizeToCenter(histogram, centerPc)`;
+- immutable transformed event streams;
+- reversible pitch-coordinate transformations when MIDI range permits;
+- explicit rejection of out-of-range MIDI rather than silent clipping;
+- derived-event provenance through `derivedFromId`, `sourceSpelling`, and accumulated `transpositionSemitones`;
+- timing remains unchanged by transposition.
+
+Tests in `tests/transposition.test.js` verify:
+
+- modulo-12 pitch transposition;
+- pitch-set transposition;
+- histogram rotation;
+- center-normalized invariance under equal event/center transposition;
+- source immutability;
+- round-trip pitch recovery;
+- timing preservation;
+- MIDI range failure behavior.
+
+Verification performed before checkpoint:
+
+```text
+npm test
+20 tests passed / 0 failed
+
+npm run build
+passed
+
+node --check src/theory/transposition.js
+passed
+```
+
+Real-catalog regression performed locally against `Springtime_Stanchen.musicxml`:
+
+```text
+canonical events:              751
+transposed events:             751
+center-normalized histograms:  equal after +5 semitones
+source events mutated:         no
+```
+
+### Important boundary
+
+HHF-002 provides mathematically correct semitone transposition and center normalization. It does **not** yet claim full key-aware enharmonic respelling. Derived note names currently use a deterministic chromatic spelling policy while preserving `sourceSpelling`; later key/function rendering must choose musically appropriate spellings from key/system context instead of treating the temporary chromatic spelling as canonical theory.
+
 ## Gate
 
-Do not begin HHF-002 until HHF-001 remains green from this checkpoint. HHF-002 must consume the canonical event model rather than creating a second event representation.
+HHF-001 and HHF-002 are green checkpoints. HHF-003 must build analysis windows on the canonical event stream and must not introduce a second timing/event representation.
