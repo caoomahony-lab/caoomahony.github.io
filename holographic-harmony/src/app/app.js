@@ -135,7 +135,7 @@ export class HolographicHarmonyApp {
     this.audio.addEventListener("pause", () => {
       this.playButton.textContent = "▶";
       this.stopAnimation();
-      this.renderAt(this.audio.currentTime || 0, true);
+      this.renderAt(this.scoreTime(), true);
     });
     this.audio.addEventListener("ended", () => {
       this.playButton.textContent = "▶";

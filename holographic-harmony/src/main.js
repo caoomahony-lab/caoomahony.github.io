@@ -1,4 +1,3 @@
-import "./styles/app.css";
 import { loadTrackManifest } from "./app/tracks.js";
 import { HolographicHarmonyApp } from "./app/app.js";
 
