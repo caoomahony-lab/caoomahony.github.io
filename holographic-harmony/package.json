@@ -1,0 +1,14 @@
+{
+  "name": "holographic-harmony-visualizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Time-varying 12-pitch active/shadow-field visualizer based on Holographic Harmony.",
+  "scripts": {
+    "dev": "node scripts/generate-demo-wav.mjs && node scripts/dev-server.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/dev-server.mjs dist 4173",
+    "test": "node --test tests/*.test.js",
+    "check": "npm test && npm run build"
+  }
+}
