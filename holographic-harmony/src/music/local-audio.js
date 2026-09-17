@@ -1,6 +1,6 @@
 import { mod12 } from "../theory/pitch.js";
 
-export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-chroma-v1";
+export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-chroma-v2";
 
 const AUDIO_EXTENSIONS = new Set(["mp3", "m4a", "aac", "wav", "flac", "ogg", "oga", "opus", "webm"]);
 const SCORE_EXTENSIONS = new Set(["musicxml", "xml"]);
@@ -223,8 +223,9 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     frameCount: frames.length,
     durationSeconds: samples.length / targetRate,
     overallChroma,
+    frames: Object.freeze(frames),
     events,
-    note: "Pitch-class activity is inferred from decoded audio; it is not a score transcription."
+    note: "Pitch-class activity and time-local chroma are inferred from decoded audio; they are not score transcription."
   });
 }
 
