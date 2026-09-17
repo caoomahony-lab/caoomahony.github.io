@@ -196,7 +196,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     }
 
     const primary = audioRegions.length ? audioRegions : microSegments;
-    this.harmonyTitle.textContent = "AUDIO HARMONIC REGION TIMELINE · inferred";
+    this.harmonyTitle.textContent = "AUDIO HARMONIC TIMELINE · inferred regions";
     this.harmonyEvidence.textContent = "INFERRED FROM AUDIO";
     this.harmonyDetail.hidden = !audioRegions.length;
     this.renderTimelineButtons(primary, this.harmonyTrack, this.harmonyRegionEls, {
