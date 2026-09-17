@@ -74,5 +74,16 @@ test("browser surface includes the audio harmonic timeline and stylesheet", () =
   assert.match(appSource, /AUDIO HARMONIC TIMELINE/);
   assert.match(appSource, /inferAudioHarmonySegments/);
   assert.match(appSource, /relative weights, not probabilities/);
+  assert.match(appSource, /inferScoreHarmony/);
+  assert.match(appSource, /Micro-segment detail/);
+  assert.match(appSource, /micro-segments →/);
+  assert.match(appSource, /Load matching score/);
+  assert.match(appSource, /compareAudioToScore/);
+  assert.match(appSource, /processed locally · nothing uploaded/);
+  assert.match(appSource, /Measured reference: score notes and lowest sounding MIDI/);
+  assert.match(styleSource, /overflow:\s*hidden/);
+  assert.match(styleSource, /overflow-x:\s*auto/);
+  assert.match(styleSource, /audio-reference-controls/);
+  assert.match(styleSource, /audio-reference-grid/);
   assert.match(indexSource, /audio-harmony\.css/);
 });
