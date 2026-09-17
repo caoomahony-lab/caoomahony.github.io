@@ -80,8 +80,10 @@ function selectContext(sequence, { contextTonic = "", systemId = "major" } = {})
 }
 
 function progressionRows(sequence, context, targetTonic) {
+  const selectedHypothesis = context.interpretation.hypotheses[0] ?? null;
   return Object.freeze(sequence.chords.map((sourceChord, index) => {
-    const interpreted = context.interpretation.chords[index];
+    const selectedFunctionEntry = selectedHypothesis?.functions?.[index] ?? null;
+    const interpreted = selectedFunctionEntry ?? context.interpretation.chords[index];
     const best = interpreted?.candidates?.[0] ?? null;
     return Object.freeze({
       index,
