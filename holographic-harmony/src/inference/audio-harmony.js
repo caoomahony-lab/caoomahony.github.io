@@ -204,11 +204,18 @@ export function inferAudioHarmonySegments(framesRaw, hopSecondsRaw, options = {}
   const segments = buildSegments(frames, labels, hopSeconds, options);
   const harmonicRegions = consolidateHarmonicRegions(segments, options.harmonicRegions || options);
   const sequence = segments.map((segment) => ({ pcs: segment.pcs, bassPc: null, weight: segment.duration }));
+  const regionSequence = harmonicRegions.regions.map((region) => ({ pcs: region.pcs, bassPc: null, weight: region.duration }));
   let harmonicAnalysis = null;
+  let regionHarmonicAnalysis = null;
   try {
     harmonicAnalysis = sequence.length ? analyzeHarmonicObjectSequence(sequence) : null;
   } catch {
     harmonicAnalysis = null;
+  }
+  try {
+    regionHarmonicAnalysis = regionSequence.length ? analyzeHarmonicObjectSequence(regionSequence) : null;
+  } catch {
+    regionHarmonicAnalysis = null;
   }
   return Object.freeze({
     version: AUDIO_HARMONY_VERSION,
@@ -222,6 +229,7 @@ export function inferAudioHarmonySegments(framesRaw, hopSecondsRaw, options = {}
     regions: harmonicRegions.regions,
     harmonicRegions,
     harmonicAnalysis,
+    regionHarmonicAnalysis,
     note: "Chord boundaries, roots, and qualities are inferred from chroma over time; bass identity is not measured by this layer."
   });
 }
