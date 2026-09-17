@@ -1,0 +1,268 @@
+.harmonic-savant-root {
+  min-height: 100vh;
+}
+
+.harmonic-savant-continuation-host {
+  width: min(1180px, calc(100% - 28px));
+  margin: 0 auto 34px;
+}
+
+.hs-continuation-panel {
+  border: 1px solid #172a3f;
+  background: linear-gradient(180deg, rgba(12,25,40,.96), rgba(7,16,28,.96));
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+  padding: 18px;
+}
+
+.hs-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hs-title {
+  margin: 4px 0 0;
+  font-size: clamp(20px, 3vw, 28px);
+  letter-spacing: -.02em;
+}
+
+.hs-intro {
+  max-width: 900px;
+  margin: 10px 0 16px;
+  color: #8fa9ca;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.hs-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hs-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hs-field-wide { grid-column: 1 / -1; }
+
+.hs-field-label {
+  color: #bdd0e8;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.hs-field-help,
+.hs-small-note,
+.hs-evidence-note {
+  color: #7088a8;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.hs-input,
+.hs-textarea,
+.hs-continuation-panel select {
+  width: 100%;
+  color: #f2f7ff;
+  background: #091421;
+  border: 1px solid #203b58;
+  border-radius: 10px;
+  outline: none;
+}
+
+.hs-input,
+.hs-continuation-panel select { padding: 9px 11px; }
+
+.hs-textarea {
+  resize: vertical;
+  min-height: 66px;
+  padding: 11px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.hs-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  color: #9db3cf;
+  font-size: 12px;
+}
+
+.hs-checkbox input { accent-color: #8ebeff; }
+
+.hs-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.hs-primary,
+.hs-secondary {
+  border-radius: 10px;
+  padding: 9px 13px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
+}
+
+.hs-primary {
+  color: #08111d;
+  background: #dcecff;
+  border: 1px solid #eef7ff;
+}
+
+.hs-secondary {
+  color: #dcecff;
+  background: #102138;
+  border: 1px solid #29496c;
+}
+
+.hs-primary:disabled,
+.hs-secondary:disabled { opacity: .45; cursor: default; }
+
+.hs-action-status { color: #8fa9ca; font-size: 11px; }
+.hs-output { display: grid; gap: 12px; margin-top: 16px; }
+
+.hs-result-card {
+  border: 1px solid rgba(61, 93, 130, .5);
+  background: rgba(4, 12, 22, .5);
+  border-radius: 12px;
+  padding: 13px;
+  overflow: hidden;
+}
+
+.hs-result-title {
+  color: #86a7cf;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
+}
+
+.hs-context-primary { font-size: 19px; font-weight: 750; }
+
+.hs-evidence-chip,
+.hs-source-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #29445f;
+  background: #0b1a2a;
+  border-radius: 999px;
+  color: #94b9e5;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  padding: 3px 7px;
+}
+
+.hs-hypotheses { display: grid; gap: 4px; margin-top: 9px; max-width: 520px; }
+.hs-hypothesis-row { display: flex; justify-content: space-between; gap: 12px; color: #aabdd5; font-size: 11px; }
+
+.hs-function-table { display: grid; min-width: 720px; }
+.hs-result-card:has(.hs-function-table) { overflow-x: auto; }
+.hs-function-row {
+  display: grid;
+  grid-template-columns: 1fr .65fr .65fr 1fr 2.2fr;
+  gap: 10px;
+  align-items: start;
+  border-top: 1px solid rgba(63, 92, 126, .2);
+  padding: 8px 2px;
+  color: #cbd8e8;
+  font-size: 11px;
+}
+
+.hs-function-header {
+  border-top: 0;
+  color: #6f8aaa;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.hs-chord-symbol { color: #fff; font-weight: 800; }
+.hs-beginner { color: #91a9c6; }
+.hs-candidate-list { display: grid; gap: 9px; }
+
+.hs-continuation-row {
+  border: 1px solid rgba(64, 99, 139, .32);
+  border-radius: 10px;
+  background: rgba(8, 20, 34, .72);
+  padding: 11px;
+}
+
+.hs-continuation-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.hs-continuation-identity { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.hs-continuation-symbol { font-size: 17px; color: #f3f7fd; }
+.hs-continuation-function { color: #89a7ca; font-size: 11px; }
+.hs-weighted-score { color: #b6d8ff; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.hs-candidate-explanation { margin-top: 5px; color: #9db1c9; font-size: 11px; line-height: 1.4; }
+.hs-source-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+
+.hs-score-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(75px, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.hs-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 6px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  background: #081522;
+  border: 1px solid rgba(48, 78, 111, .45);
+}
+
+.hs-score.is-unavailable { opacity: .46; }
+.hs-score-label { color: #7791b0; font-size: 8px; letter-spacing: .05em; text-transform: uppercase; }
+.hs-score-value { color: #e4effc; font-size: 11px; text-align: right; }
+.hs-score-weight { grid-column: 1 / -1; color: #607a9a; font-size: 8px; }
+.hs-best-voicing { margin-top: 8px; color: #83a6ce; font-size: 10px; }
+.hs-evidence-note { text-align: center; padding: 2px 8px; }
+.hs-empty { color: #7189a7; font-size: 12px; padding: 10px 2px; }
+
+.hs-error {
+  border: 1px solid rgba(220, 90, 110, .45);
+  background: rgba(80, 12, 24, .22);
+  color: #ffb1bd;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .hs-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hs-score-grid { grid-template-columns: repeat(3, minmax(75px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .harmonic-savant-continuation-host { width: min(100% - 18px, 720px); }
+  .hs-continuation-panel { padding: 13px; }
+  .hs-form-grid { grid-template-columns: 1fr; }
+  .hs-field-wide { grid-column: auto; }
+  .hs-score-grid { grid-template-columns: repeat(2, minmax(75px, 1fr)); }
+  .hs-continuation-head { flex-direction: column; }
+}
