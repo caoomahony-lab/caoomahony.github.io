@@ -159,6 +159,91 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     }
   }
 
+  async loadAudioReferenceScore(file) {
+    if (!this.audioHarmony?.regions?.length || this.currentTrack?.id !== LOCAL_TRACK_ID) {
+      this.referenceStatus.textContent = "Open and finish analyzing a local audio file first.";
+      return;
+    }
+
+    const generation = this.generation;
+    this.referenceScoreButton.disabled = true;
+    this.referenceStatus.textContent = `Parsing ${file.name} locally and comparing timelines…`;
+
+    try {
+      const xml = await file.text();
+      if (generation !== this.generation) return;
+      const parsed = parseMusicXML(xml, globalThis.DOMParser, {
+        trackId: `reference:${file.name}`
+      });
+      if (generation !== this.generation) return;
+      const scoreHarmony = inferScoreHarmony(parsed.notes);
+      if (!scoreHarmony.regions.length) throw new Error("The reference score did not produce sounding sonority regions.");
+      const comparison = compareAudioToScore(
+        this.audioHarmony.regions,
+        scoreHarmony.regions,
+        { microSegmentCount: this.audioHarmony.segmentCount }
+      );
+      if (generation !== this.generation) return;
+
+      this.audioReferenceScore = scoreHarmony;
+      this.audioScoreComparison = comparison;
+      this.referenceStatus.textContent = `${file.name} · processed locally · nothing uploaded.`;
+      this.renderAudioScoreComparison();
+    } catch (error) {
+      if (generation !== this.generation) return;
+      console.error(error);
+      this.audioReferenceScore = null;
+      this.audioScoreComparison = null;
+      this.referenceResults.hidden = true;
+      this.referenceResults.innerHTML = "";
+      this.referenceStatus.textContent = `Reference comparison failed: ${error.message}`;
+    } finally {
+      if (generation === this.generation) this.referenceScoreButton.disabled = false;
+    }
+  }
+
+  renderAudioScoreComparison() {
+    const comparison = this.audioScoreComparison;
+    if (!comparison || !this.referenceResults) return;
+    const percent = (value) => value == null ? "unavailable" : `${Math.round(value * 100)}%`;
+    const seconds = (value) => `${Number(value || 0).toFixed(2)} s`;
+    const offset = comparison.estimatedAudioMinusScoreOffsetSeconds;
+    const rows = [
+      ["Estimated audio − score offset", `${offset >= 0 ? "+" : ""}${seconds(offset)}`],
+      ["Root agreement", percent(comparison.agreement.timeWeightedRootAgreement)],
+      ["Pitch-set overlap", percent(comparison.agreement.timeWeightedPitchSetJaccard)],
+      ["Exact pitch-set agreement", percent(comparison.agreement.timeWeightedExactPitchSetAgreement)],
+      ["Chord-template agreement", percent(comparison.agreement.timeWeightedChordTemplateAgreement)],
+      ["Boundary precision / recall", `${percent(comparison.boundaries.precision)} / ${percent(comparison.boundaries.recall)}`],
+      ["Audio coverage", percent(comparison.coverage.audioCoverageShare)],
+      ["Unresolved audio", seconds(comparison.coverage.unresolvedAudioSeconds)],
+      ["Timeline counts", `${comparison.counts.microSegmentCount} micro → ${comparison.counts.audioRegionCount} regions ↔ ${comparison.counts.scoreReferenceRegionCount} score references`]
+    ];
+
+    this.referenceResults.innerHTML = "";
+    const grid = create("dl", "audio-reference-grid");
+    for (const [label, value] of rows) {
+      grid.append(
+        create("dt", "audio-reference-label", label),
+        create("dd", "audio-reference-value", value)
+      );
+    }
+    this.referenceResults.appendChild(grid);
+
+    if (comparison.rootConfusions.length) {
+      const summary = comparison.rootConfusions.slice(0, 4)
+        .map((item) => `score pc ${item.scoreRootPc} → audio pc ${item.audioRootPc} (${item.seconds.toFixed(2)} s)`)
+        .join(" · ");
+      this.referenceResults.appendChild(create("div", "audio-reference-confusions", `Leading root mismatches: ${summary}`));
+    }
+    this.referenceResults.appendChild(create(
+      "div",
+      "audio-reference-note",
+      "Measured reference: score notes and lowest sounding MIDI. Inferred layers: score chord labels, audio regions, roots/functions, and time alignment. Relative weights are not probabilities."
+    ));
+    this.referenceResults.hidden = false;
+  }
+
   async loadLocalMusicXML(file) {
     await super.loadLocalMusicXML(file);
     if (
@@ -224,6 +309,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.harmonyTitle.textContent = "SCORE SONORITY REFERENCE · measured states, interpreted chords";
       this.harmonyEvidence.textContent = "MEASURED SCORE / INFERRED LABELS";
       this.harmonyDetail.hidden = true;
+      this.referenceControls.hidden = true;
       this.renderTimelineButtons(scoreRegions, this.harmonyTrack, this.harmonyRegionEls, {
         kind: "score-region",
         seekable: false
@@ -235,6 +321,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     const primary = audioRegions.length ? audioRegions : microSegments;
     this.harmonyTitle.textContent = "AUDIO HARMONIC TIMELINE · inferred regions";
     this.harmonyEvidence.textContent = "INFERRED FROM AUDIO";
+    this.referenceControls.hidden = false;
     this.harmonyDetail.hidden = !audioRegions.length;
     this.renderTimelineButtons(primary, this.harmonyTrack, this.harmonyRegionEls, {
       kind: "region",
