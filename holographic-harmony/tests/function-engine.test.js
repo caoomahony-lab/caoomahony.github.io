@@ -36,6 +36,23 @@ test("I-vi-IV-V sequence returns multiple contextual hypotheses", () => {
   assert.ok(analysis.hypotheses[1].relativeWeight > 0);
 });
 
+test("sequence syntax prevents pitch-activity bias from promoting E Phrygian over C/A contexts", () => {
+  const analysis = interpretChordSequence([
+    { pcs: [0,4,7,11], bassPc: 0 },
+    { pcs: [4,8,11,2], bassPc: 8 },
+    { pcs: [9,0,4,7,11], bassPc: 9 },
+    { pcs: [5,9,0,4], bassPc: 5 }
+  ], { hypothesisLimit: 8 });
+
+  const top = analysis.hypotheses[0];
+  assert.ok([0,9].includes(top.centerPc), `expected C- or A-centered context, got ${top.centerPc} ${top.systemId}`);
+  const ePhrygian = analysis.hypotheses.find((item) => item.centerPc === 4 && item.systemId === "phrygian");
+  assert.ok(ePhrygian, "E Phrygian should remain available as a competing hypothesis rather than being deleted");
+  assert.ok(top.support > ePhrygian.support);
+  assert.ok(top.syntaxSupport > ePhrygian.syntaxSupport);
+  assert.equal(top.syntaxEvidence.evidenceClass, "inferred-syntactic");
+});
+
 test("beginner rendering simplifies language without changing function", () => {
   const chord = rankChordCandidates([7,11,2], { limit: 1 })[0];
   const fn = interpretChordUnderSystem(chord, { centerPc: 0, systemId: "major", systemSupport: 0.8 });
