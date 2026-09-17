@@ -48,6 +48,7 @@ const SUFFIX_TO_TEMPLATE = Object.freeze({
 });
 
 const TEMPLATE_BY_ID = new Map(CHORD_TEMPLATES.map((template) => [template.id, template]));
+const NATURAL_PC = Object.freeze({ C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 });
 
 function normalizeAccidentals(text) {
   return String(text)
@@ -129,10 +130,12 @@ export function parseRegisteredPitch(value) {
   }
   const match = /^([A-Ga-g])([#b♯♭]*)(-?\d+)$/.exec(text);
   if (!match) throw new TypeError(`unsupported registered pitch: ${text}`);
-  const spelling = normalizeAccidentals(`${match[1].toUpperCase()}${match[2]}`);
-  const pitchClass = parseSpelledPitchClass(spelling).pitchClass;
+  const letter = match[1].toUpperCase();
+  const accidentals = normalizeAccidentals(match[2]);
   const octave = Number(match[3]);
-  const midi = 12 * (octave + 1) + pitchClass;
+  let accidentalOffset = 0;
+  for (const accidental of accidentals) accidentalOffset += accidental === "#" ? 1 : -1;
+  const midi = 12 * (octave + 1) + NATURAL_PC[letter] + accidentalOffset;
   if (!Number.isInteger(midi) || midi < 0 || midi > 127) throw new RangeError(`registered pitch outside MIDI range: ${text}`);
   return midi;
 }
