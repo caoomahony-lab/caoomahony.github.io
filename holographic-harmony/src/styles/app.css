@@ -58,8 +58,8 @@ h1 { margin: 3px 0 0; font-size: clamp(22px, 4vw, 34px); font-weight: 650; lette
   box-shadow: 0 18px 50px rgba(0,0,0,.18);
 }
 
-.controls-panel { padding: 13px 15px; margin-bottom: 14px; }
-.track-selector { display: flex; flex-direction: column; gap: 5px; min-width: min(520px, 76vw); }
+.controls-panel { padding: 13px 15px; margin-bottom: 8px; }
+.track-selector { display: flex; flex-direction: column; gap: 5px; min-width: min(520px, 62vw); }
 select {
   color: #f2f7ff;
   background: #091421;
@@ -67,6 +67,26 @@ select {
   padding: 9px 11px;
   border-radius: 10px;
   outline: none;
+}
+.source-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.open-file-button {
+  color: #08111d;
+  background: #d9ebff;
+  border: 1px solid #d9ebff;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.open-file-button:active { transform: translateY(1px); }
+.local-file-input { display: none; }
+.local-source-note {
+  margin: 0 2px 14px;
+  padding: 0 4px;
+  color: #7890ad;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .visual-grid {
@@ -121,6 +141,7 @@ select {
   color: #f5f8ff; background: #13263c; border: 1px solid #2a4b6e; border-radius: 10px;
   cursor: pointer;
 }
+.play-button:disabled { opacity: .38; cursor: not-allowed; }
 .seek { width: 100%; accent-color: #f35473; }
 .time-readout { font-variant-numeric: tabular-nums; color: #a9bdd6; min-width: 96px; text-align: right; font-size: 12px; }
 .timeline-card { margin-top: 14px; padding: 12px 14px 8px; }
@@ -142,9 +163,12 @@ select {
   .hhv-header { align-items: flex-start; }
   .status-pill { margin-top: 2px; }
   .controls-panel { flex-direction: column; align-items: stretch; }
-  .mode-badge { align-self: flex-start; }
+  .source-actions { justify-content: space-between; width: 100%; }
+  .open-file-button { flex: 1 1 auto; min-height: 44px; }
+  .mode-badge { flex: 0 0 auto; }
   .circle-card { height: 390px; min-height: 390px; }
   .diagnostics { grid-template-columns: 1fr; }
   .transport { gap: 9px; }
   .time-readout { min-width: 78px; font-size: 11px; }
+  .local-source-note { font-size: 10.5px; }
 }
