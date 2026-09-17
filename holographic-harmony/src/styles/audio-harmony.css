@@ -1,0 +1,106 @@
+.audio-harmony-card {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #172a3f;
+  background: linear-gradient(180deg, rgba(12,25,40,.96), rgba(7,16,28,.96));
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+}
+.audio-harmony-card[hidden] { display: none; }
+.audio-harmony-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.audio-harmony-evidence {
+  border: 1px solid #23405e;
+  background: #0c1928;
+  color: #9ecfff;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+.audio-harmony-now {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.audio-harmony-current {
+  grid-row: 1 / span 2;
+  min-width: 84px;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 800;
+  color: #f4f8ff;
+}
+.audio-harmony-function {
+  color: #d4e2f5;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.audio-harmony-alternatives,
+.audio-harmony-summary {
+  color: #7890ad;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.audio-harmony-track {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  overflow-x: auto;
+  padding: 3px 0 8px;
+  scrollbar-width: thin;
+}
+.audio-harmony-segment {
+  flex-basis: 64px;
+  min-width: 58px;
+  max-width: 180px;
+  min-height: 58px;
+  border: 1px solid #203b58;
+  background: #091421;
+  color: #dce9fa;
+  border-radius: 9px;
+  padding: 7px 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 90ms linear, background 90ms linear, transform 90ms linear;
+}
+.audio-harmony-segment:active { transform: translateY(1px); }
+.audio-harmony-segment.is-current {
+  border-color: #f35473;
+  background: #25101a;
+  box-shadow: inset 0 0 0 1px rgba(243,84,115,.20);
+}
+.audio-harmony-segment-symbol {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+.audio-harmony-segment-time {
+  display: block;
+  margin-top: 8px;
+  color: #7890ad;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.audio-harmony-summary { margin-top: 2px; }
+
+@media (max-width: 520px) {
+  .audio-harmony-card { padding: 12px; }
+  .audio-harmony-heading { align-items: flex-start; }
+  .audio-harmony-now { grid-template-columns: 1fr; }
+  .audio-harmony-current { grid-row: auto; font-size: 26px; }
+  .audio-harmony-segment { min-width: 66px; }
+}
