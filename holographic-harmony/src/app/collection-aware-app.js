@@ -6,6 +6,8 @@ import { inferScaleCandidates, crystallizationSupport } from "../theory/inferenc
 import { inferCollectionCenterState } from "../inference/collection-center.js";
 import { inferAudioHarmonySegments } from "../inference/audio-harmony.js";
 import { inferScoreHarmony } from "../inference/score-harmony.js";
+import { compareAudioToScore } from "../validation/audio-score-comparison.js";
+import { parseMusicXML } from "../music/musicxml.js";
 import { analyzeLocalAudioFile } from "../music/local-audio.js";
 import { pitchClassName } from "../theory/pitch.js";
 
@@ -24,6 +26,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.currentCollection = null;
     this.audioHarmony = null;
     this.scoreHarmony = null;
+    this.audioReferenceScore = null;
+    this.audioScoreComparison = null;
     this.harmonyRegionEls = [];
     this.harmonySegmentEls = [];
   }
@@ -45,6 +49,31 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.harmonyFunction = create("div", "audio-harmony-function", "No audio segmentation loaded.");
     this.harmonyAlternatives = create("div", "audio-harmony-alternatives", "");
     now.append(this.harmonyCurrent, this.harmonyFunction, this.harmonyAlternatives);
+    this.referenceControls = create("div", "audio-reference-controls");
+    this.referenceControls.hidden = true;
+    this.referenceScoreButton = create("button", "audio-reference-button", "Load matching score");
+    this.referenceScoreButton.type = "button";
+    this.referenceScoreButton.setAttribute("aria-label", "Load matching MusicXML score for local comparison");
+    this.referenceScoreInput = document.createElement("input");
+    this.referenceScoreInput.type = "file";
+    this.referenceScoreInput.accept = ".musicxml,.xml,application/vnd.recordare.musicxml+xml,application/xml,text/xml";
+    this.referenceScoreInput.className = "audio-reference-input";
+    this.referenceScoreInput.setAttribute("aria-label", "Choose matching MusicXML score");
+    this.referenceStatus = create("div", "audio-reference-status", "Optional: compare this inferred audio timeline with measured score notes.");
+    this.referenceResults = create("div", "audio-reference-results");
+    this.referenceResults.hidden = true;
+    this.referenceControls.append(
+      this.referenceScoreButton,
+      this.referenceScoreInput,
+      this.referenceStatus,
+      this.referenceResults
+    );
+    this.referenceScoreButton.addEventListener("click", () => this.referenceScoreInput.click());
+    this.referenceScoreInput.addEventListener("change", async () => {
+      const file = this.referenceScoreInput.files?.[0] || null;
+      this.referenceScoreInput.value = "";
+      if (file) await this.loadAudioReferenceScore(file);
+    });
     this.harmonyTrack = create("div", "audio-harmony-track audio-harmony-region-track");
     this.harmonyTrack.setAttribute("aria-label", "Inferred harmonic regions");
     this.harmonyDetail = create("details", "audio-harmony-detail");
@@ -53,7 +82,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.harmonyMicroTrack.setAttribute("aria-label", "Inferred harmonic micro-segments");
     this.harmonyDetail.append(this.harmonyDetailSummary, this.harmonyMicroTrack);
     this.harmonySummary = create("div", "audio-harmony-summary", "");
-    this.harmonyCard.append(heading, now, this.harmonyTrack, this.harmonyDetail, this.harmonySummary);
+    this.harmonyCard.append(heading, now, this.referenceControls, this.harmonyTrack, this.harmonyDetail, this.harmonySummary);
     const footer = this.root.querySelector(".hhv-footer");
     if (footer) this.root.insertBefore(this.harmonyCard, footer);
     else this.root.appendChild(this.harmonyCard);
@@ -64,11 +93,19 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.currentCollection = null;
     this.audioHarmony = null;
     this.scoreHarmony = null;
+    this.audioReferenceScore = null;
+    this.audioScoreComparison = null;
     this.harmonyRegionEls = [];
     this.harmonySegmentEls = [];
     if (this.harmonyCard) this.harmonyCard.hidden = true;
     if (this.harmonyTrack) this.harmonyTrack.innerHTML = "";
     if (this.harmonyMicroTrack) this.harmonyMicroTrack.innerHTML = "";
+    if (this.referenceControls) this.referenceControls.hidden = true;
+    if (this.referenceResults) {
+      this.referenceResults.hidden = true;
+      this.referenceResults.innerHTML = "";
+    }
+    if (this.referenceStatus) this.referenceStatus.textContent = "Optional: compare this inferred audio timeline with measured score notes.";
     if (this.primaryDiagnosticLabel) this.primaryDiagnosticLabel.textContent = "CURRENT FIELD";
     return generation;
   }
