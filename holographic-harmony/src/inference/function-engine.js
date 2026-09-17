@@ -122,11 +122,13 @@ function sequenceSyntaxSupport(chords, chordCandidates, centerPc, system) {
 
     if (candidate.rootPc === center) {
       const compatibility = tonicThirdCompatibility(candidate, system);
-      const positionalWeight = index === 0 ? 1 : index === best.length - 1 ? 0.9 : 0.72;
+      const positionalWeight = index === 0 ? 1 : index === best.length - 1 ? 0.65 : 0.72;
       if (compatibility > 0) {
         centerAnchor = Math.max(centerAnchor, compatibility * candidate.support * positionalWeight);
-        if (index === 0 || index === best.length - 1) {
+        if (index === 0) {
           boundaryAnchor = Math.max(boundaryAnchor, compatibility * candidate.support);
+        } else if (index === best.length - 1) {
+          boundaryAnchor = Math.max(boundaryAnchor, 0.55 * compatibility * candidate.support);
         }
       } else if (candidate.support >= 0.9) {
         centerQualityConflict = Math.max(centerQualityConflict, candidate.support * positionalWeight);
