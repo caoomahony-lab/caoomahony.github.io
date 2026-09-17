@@ -1,5 +1,9 @@
 .audio-harmony-card {
   margin-top: 14px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: 14px;
   border: 1px solid #172a3f;
   background: linear-gradient(180deg, rgba(12,25,40,.96), rgba(7,16,28,.96));
@@ -54,6 +58,7 @@
 }
 .audio-harmony-track {
   display: flex;
+  min-width: 0;
   gap: 5px;
   width: 100%;
   overflow-x: auto;
@@ -103,4 +108,27 @@
   .audio-harmony-now { grid-template-columns: 1fr; }
   .audio-harmony-current { grid-row: auto; font-size: 26px; }
   .audio-harmony-segment { min-width: 66px; }
+}
+
+.audio-harmony-detail {
+  margin-top: 8px;
+  min-width: 0;
+  border-top: 1px solid #14283d;
+}
+.audio-harmony-detail[hidden] { display: none; }
+.audio-harmony-detail-summary {
+  padding: 8px 0 5px;
+  color: #7890ad;
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+}
+.audio-harmony-micro-track .audio-harmony-segment {
+  min-width: 54px;
+  min-height: 48px;
+  opacity: .82;
+}
+.audio-harmony-score-region:disabled {
+  cursor: default;
+  opacity: 1;
 }
