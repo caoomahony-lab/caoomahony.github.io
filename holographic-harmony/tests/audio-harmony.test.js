@@ -67,6 +67,17 @@ test("audio chord layer preserves ambiguity and does not invent bass evidence", 
   assert.match(result.note, /inferred/i);
 });
 
+test("sparse audio evidence is not padded into a fabricated triad", () => {
+  const hop = 0.25;
+  const input = Array.from({ length: 8 }, (_, index) => ({
+    time: index * hop,
+    chroma: chromaFor([9])
+  }));
+  const result = inferAudioHarmonySegments(input, hop);
+  assert.deepEqual(result.segments[0].observedPitchClasses, [9]);
+  assert.deepEqual(result.regions[0].observedPitchClasses, [9]);
+});
+
 test("browser surface includes the audio harmonic timeline and stylesheet", () => {
   const appSource = fs.readFileSync(new URL("../src/app/collection-aware-app.js", import.meta.url), "utf8");
   const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");

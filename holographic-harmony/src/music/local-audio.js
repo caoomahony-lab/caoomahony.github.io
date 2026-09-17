@@ -208,7 +208,7 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
   const events = mergeActivityFrames(
     frames,
     hopSeconds,
-    Number(options.eventThreshold || 0.56),
+    Number(options.eventThreshold || 0.60),
     Math.max(1, Number(options.maxPitchClassesPerFrame || 4))
   );
 

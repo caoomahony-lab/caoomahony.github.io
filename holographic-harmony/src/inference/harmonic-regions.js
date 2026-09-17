@@ -106,15 +106,14 @@ function weightedChroma(segments) {
 
 function activePitchClasses(chroma, options) {
   const max = Math.max(...chroma, 1e-12);
-  const relativeFloor = Number(options.relativeFloor ?? 0.34);
-  const maxPitchClasses = Math.max(3, Number(options.maxPitchClasses ?? 5));
+  const relativeFloor = Number(options.relativeFloor ?? 0.60);
+  const maxPitchClasses = Math.max(1, Number(options.maxPitchClasses ?? 4));
   const ordered = chroma
     .map((strength, pc) => ({ pc, strength }))
     .sort((a, b) => b.strength - a.strength || a.pc - b.pc);
   const selected = ordered
     .filter((item, index) => index < maxPitchClasses && item.strength >= max * relativeFloor)
     .map((item) => item.pc);
-  while (selected.length < Math.min(3, ordered.length)) selected.push(ordered[selected.length].pc);
   return Object.freeze([...new Set(selected)].sort((a, b) => a - b));
 }
 
