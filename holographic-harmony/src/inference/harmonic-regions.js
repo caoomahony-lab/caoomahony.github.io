@@ -185,7 +185,7 @@ function absorbAmbiguousBridges(groups, options) {
 function makeRegion(group, index, options) {
   const segments = group.segments;
   const onset = Math.min(...segments.map((segment) => Number(segment.onset)));
-  const end = Math.max(...segments.map((segment) => Number(segment.end));
+  const end = Math.max(...segments.map((segment) => Number(segment.end)));
   const chroma = weightedChroma(segments);
   const observedPitchClasses = activePitchClasses(chroma, options);
   const candidatesRaw = rankChordCandidates(observedPitchClasses, {
