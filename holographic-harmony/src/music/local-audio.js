@@ -225,7 +225,7 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     overallChroma,
     frames: Object.freeze(frames),
     events,
-    note: "Pitch-class activity and time-local chroma are inferred from decoded audio; they are not score transcription."
+    note: "Pitch-class activity and time-local chroma are inferred from decoded audio; this is not a score transcription."
   });
 }
 
