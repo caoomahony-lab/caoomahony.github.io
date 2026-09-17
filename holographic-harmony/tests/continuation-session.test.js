@@ -29,6 +29,21 @@ test("empty context tonic preserves inference and competing context hypotheses",
   assert.ok(session.notes[0].includes("inference"));
 });
 
+test("inferred continuation rows stay aligned to the selected syntax-aware context", () => {
+  const session = buildContinuationSession({
+    progression: "Cmaj7 | E7/G# | Am9 | Fmaj7",
+    contextTonic: "",
+    candidateOptions: { maxCandidates: 8, holographicShadow: false }
+  });
+  assert.ok([0,9].includes(session.context.centerPc), `expected C- or A-centered context, got ${session.context.centerPc} ${session.context.systemId}`);
+  const selected = session.context.hypotheses[0];
+  assert.ok(selected.syntaxSupport > 0);
+  assert.deepEqual(
+    session.progression.map((row) => row.function?.roman ?? null),
+    selected.functions.map((entry) => entry.candidates[0]?.roman ?? null)
+  );
+});
+
 test("session does not create a composite ranking unless explicitly requested", () => {
   const session = buildContinuationSession({
     progression: "C | Am | F | G",
