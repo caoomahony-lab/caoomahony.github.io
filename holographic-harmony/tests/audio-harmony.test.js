@@ -34,6 +34,12 @@ test("audio harmonic segmentation recovers stable C-major then G-major regions",
   assert.equal(result.segments[0].symbol, "C");
   assert.equal(result.segments.at(-1).symbol, "G");
   assert.ok(result.segments.every((segment) => segment.candidates.length >= 2));
+  assert.ok(result.regionCount <= result.segmentCount);
+  assert.equal(result.harmonicRegions.microSegments[0], result.segments[0]);
+  assert.deepEqual(
+    result.regions.flatMap((region) => region.constituentMicroSegmentIndices).sort((a, b) => a - b),
+    result.segments.map((segment) => segment.index)
+  );
 });
 
 test("brief chromatic disturbance does not manufacture a stable chord segment", () => {
