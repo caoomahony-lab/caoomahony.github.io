@@ -70,6 +70,7 @@ test("audio chord layer preserves ambiguity and does not invent bass evidence", 
 test("browser surface includes the audio harmonic timeline and stylesheet", () => {
   const appSource = fs.readFileSync(new URL("../src/app/collection-aware-app.js", import.meta.url), "utf8");
   const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const styleSource = fs.readFileSync(new URL("../src/styles/audio-harmony.css", import.meta.url), "utf8");
   assert.match(appSource, /AUDIO HARMONIC TIMELINE/);
   assert.match(appSource, /inferAudioHarmonySegments/);
   assert.match(appSource, /relative weights, not probabilities/);
