@@ -77,6 +77,93 @@ function softmax(values, temperature = 0.08) {
   return exps.map((value) => value / sum);
 }
 
+function bestChordCandidate(candidates) {
+  return candidates.find((candidate) => candidate.exact) || candidates[0] || null;
+}
+
+function tonicThirdCompatibility(candidate, system) {
+  if (!candidate) return 0;
+  const systemHasMinorThird = system.intervals.includes(3);
+  const systemHasMajorThird = system.intervals.includes(4);
+  const intervals = new Set(candidate.intervals || []);
+  const chordHasMinorThird = intervals.has(3);
+  const chordHasMajorThird = intervals.has(4);
+  if (systemHasMajorThird && !systemHasMinorThird) return chordHasMajorThird && !chordHasMinorThird ? 1 : 0;
+  if (systemHasMinorThird && !systemHasMajorThird) return chordHasMinorThird && !chordHasMajorThird ? 1 : 0;
+  return 0.5;
+}
+
+function chordMembership(candidate, systemPcs) {
+  if (!candidate?.pitchClasses?.length) return 0;
+  return candidate.pitchClasses.filter((pc) => systemPcs.has(mod12(pc))).length / candidate.pitchClasses.length;
+}
+
+function isDominantQuality(candidate) {
+  return candidate != null && ["major", "dominant7", "dominant9"].includes(candidate.templateId);
+}
+
+function sequenceSyntaxSupport(chords, chordCandidates, centerPc, system) {
+  const center = mod12(centerPc);
+  const systemPcs = new Set(system.intervals.map((interval) => mod12(center + interval)));
+  const best = chordCandidates.map(bestChordCandidate);
+  let centerAnchor = 0;
+  let boundaryAnchor = 0;
+  let resolvedDominant = 0;
+  let centerQualityConflict = 0;
+  let rootedWeight = 0;
+  let rootInSystemWeight = 0;
+
+  for (let index = 0; index < best.length; index += 1) {
+    const candidate = best[index];
+    if (!candidate) continue;
+    const chordWeight = chords[index].weight;
+    rootedWeight += chordWeight;
+    if (systemPcs.has(candidate.rootPc)) rootInSystemWeight += chordWeight;
+
+    if (candidate.rootPc === center) {
+      const compatibility = tonicThirdCompatibility(candidate, system);
+      const positionalWeight = index === 0 ? 1 : index === best.length - 1 ? 0.9 : 0.72;
+      if (compatibility > 0) {
+        centerAnchor = Math.max(centerAnchor, compatibility * candidate.support * positionalWeight);
+        if (index === 0 || index === best.length - 1) {
+          boundaryAnchor = Math.max(boundaryAnchor, compatibility * candidate.support);
+        }
+      } else if (candidate.support >= 0.9) {
+        centerQualityConflict = Math.max(centerQualityConflict, candidate.support * positionalWeight);
+      }
+    }
+
+    if (index >= best.length - 1 || !isDominantQuality(candidate)) continue;
+    const target = best[index + 1];
+    if (!target || mod12(target.rootPc - candidate.rootPc) !== 5) continue;
+    if (!systemPcs.has(target.rootPc)) continue;
+    const targetMembership = chordMembership(target, systemPcs);
+    if (targetMembership < 0.6) continue;
+    const destinationStrength = target.rootPc === center ? 1 : 0.55;
+    const membershipStrength = 0.6 + 0.4 * targetMembership;
+    resolvedDominant = Math.max(resolvedDominant, destinationStrength * membershipStrength * candidate.support * target.support);
+  }
+
+  const rootInSystemShare = rootedWeight > 0 ? rootInSystemWeight / rootedWeight : 0;
+  const support = clamp01(
+    0.47 * centerAnchor +
+    0.34 * resolvedDominant +
+    0.14 * boundaryAnchor +
+    0.05 * rootInSystemShare -
+    0.18 * centerQualityConflict
+  );
+
+  return Object.freeze({
+    support,
+    centerAnchor,
+    resolvedDominant,
+    boundaryAnchor,
+    rootInSystemShare,
+    centerQualityConflict,
+    evidenceClass: "inferred-syntactic"
+  });
+}
+
 export function interpretChordSequence(sequence, { hypothesisLimit = 8, chordCandidateLimit = 6, functionCandidateLimit = 6 } = {}) {
   if (!Array.isArray(sequence) || !sequence.length) throw new TypeError("sequence must be a nonempty array");
   const chords = sequence.map(normalizeChordInput);
@@ -102,11 +189,22 @@ export function interpretChordSequence(sequence, { hypothesisLimit = 8, chordCan
       }
     }
     const meanFunctionSupport = totalWeight > 0 ? weightedSupport / totalWeight : 0;
-    const support = clamp01(0.42 * scale.support + 0.58 * meanFunctionSupport);
-    hypotheses.push({ centerPc: scale.rootPc, systemId: scale.systemId, systemName: scale.scale, scaleSupport: scale.support, meanFunctionSupport, support, functions: Object.freeze(functions) });
+    const syntax = sequenceSyntaxSupport(chords, chordCandidates, scale.rootPc, systemById(scale.systemId));
+    const support = clamp01(0.36 * scale.support + 0.46 * meanFunctionSupport + 0.18 * syntax.support);
+    hypotheses.push({
+      centerPc: scale.rootPc,
+      systemId: scale.systemId,
+      systemName: scale.scale,
+      scaleSupport: scale.support,
+      meanFunctionSupport,
+      syntaxSupport: syntax.support,
+      syntaxEvidence: syntax,
+      support,
+      functions: Object.freeze(functions)
+    });
   }
 
-  hypotheses.sort((a,b) => b.support - a.support || b.scaleSupport - a.scaleSupport || a.centerPc - b.centerPc);
+  hypotheses.sort((a,b) => b.support - a.support || b.syntaxSupport - a.syntaxSupport || b.scaleSupport - a.scaleSupport || a.centerPc - b.centerPc);
   const top = hypotheses.slice(0, hypothesisLimit);
   const weights = softmax(top.map((hypothesis) => hypothesis.support));
   const weightedHypotheses = Object.freeze(top.map((hypothesis, index) => Object.freeze({ ...hypothesis, relativeWeight: weights[index] })));
