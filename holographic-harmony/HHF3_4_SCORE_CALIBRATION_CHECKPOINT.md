@@ -2,11 +2,11 @@
 
 Branch: `harmonic-savant-hhf3.4-score-calibration`
 
-Implementation SHA: `264474e4a985325a706f6c6e775fc15a3a7ce7b0`
+Core implementation SHA: `264474e4a985325a706f6c6e775fc15a3a7ce7b0`\n\nPrivate local-pairing increment SHA: `f17dadf8a8fe9c42c41e1e17956efb20a683a050`
 
 Pull request: [#2](https://github.com/caoomahony-lab/caoomahony.github.io/pull/2)
 
-GitHub Actions run: `35265976399`
+Latest GitHub Actions run: `35266955726`
 
 ## Verification
 
@@ -95,6 +95,10 @@ Updated `src/app/collection-aware-app.js` and `src/styles/audio-harmony.css`.
 - the summary exposes `micro-segments → harmonic regions`;
 - both timelines remain seekable for audio;
 - local MusicXML exposes a score-sonority reference timeline;
+- after local audio analysis, a `Load matching score` control accepts a private MusicXML reference;
+- the reference score is parsed and compared entirely in the browser without upload;
+- transparent offset, agreement, boundary, coverage, count, and confusion diagnostics are displayed;
+- loading the reference does not replace the audio, playback clock, or HHF-3.3 micro-segments;
 - score labels explicitly distinguish measured notes/bass from inferred harmony;
 - horizontal tracks scroll inside a bounded card; duration does not create document height.
 
@@ -137,7 +141,6 @@ Updated `src/app/collection-aware-app.js` and `src/styles/audio-harmony.css`.
 ## Remaining acceptance and limitations
 
 - The private Springtime Ständchen MusicXML/MP3 pair was not available to this repository execution environment, so no private-pair metrics were fabricated.
-- The pure comparison engine is complete, but pairing a local audio file with a matching local score in one browser session is not yet wired into the UI.
-- A real browser/physical-phone session was unavailable for this exact branch. Browser behavior is covered by source-level integration tests, but audio opening, live seek synchronization, responsive rendering, and the new timeline's physical-phone behavior still require a deployed preview acceptance pass.
+- The local audio-plus-reference-score workflow is implemented, but a real browser/physical-phone session was unavailable for this exact branch. Browser behavior is covered by source-level integration tests, but audio opening, live seek synchronization, responsive rendering, and the new timeline's physical-phone behavior still require a deployed preview acceptance pass.
 - Production was not changed.
 - Private user music was not committed, uploaded, or published.
