@@ -42,7 +42,7 @@ test("sequence syntax prevents pitch-activity bias from promoting E Phrygian ove
     { pcs: [4,8,11,2], bassPc: 8 },
     { pcs: [9,0,4,7,11], bassPc: 9 },
     { pcs: [5,9,0,4], bassPc: 5 }
-  ], { hypothesisLimit: 8 });
+  ], { hypothesisLimit: 12 });
 
   const top = analysis.hypotheses[0];
   assert.ok([0,9].includes(top.centerPc), `expected C- or A-centered context, got ${top.centerPc} ${top.systemId}`);
