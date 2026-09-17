@@ -1,4 +1,4 @@
-import { HolographicHarmonyApp } from "./app.js";
+import { CollectionAwareHolographicHarmonyApp } from "./collection-aware-app.js";
 import { ContinuationPanel } from "./continuation-panel.js";
 import { complementField } from "../theory/fields.js";
 
@@ -16,7 +16,7 @@ export class HarmonicSavantApp {
     this.continuationRoot.className = "harmonic-savant-continuation-host";
     this.root.append(this.visualizerRoot, this.continuationRoot);
 
-    this.visualizer = new HolographicHarmonyApp(this.visualizerRoot, tracks);
+    this.visualizer = new CollectionAwareHolographicHarmonyApp(this.visualizerRoot, tracks);
     this.continuation = new ContinuationPanel(this.continuationRoot, {
       getHolographicContext: () => this.currentHolographicContext()
     });
