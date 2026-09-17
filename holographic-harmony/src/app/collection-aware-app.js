@@ -5,6 +5,7 @@ import { computeAdmissionHistory, compareAdmissionOrder } from "../theory/admiss
 import { inferScaleCandidates, crystallizationSupport } from "../theory/inference.js";
 import { inferCollectionCenterState } from "../inference/collection-center.js";
 import { inferAudioHarmonySegments } from "../inference/audio-harmony.js";
+import { inferScoreHarmony } from "../inference/score-harmony.js";
 import { analyzeLocalAudioFile } from "../music/local-audio.js";
 import { pitchClassName } from "../theory/pitch.js";
 
@@ -22,6 +23,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     super(root, tracks);
     this.currentCollection = null;
     this.audioHarmony = null;
+    this.scoreHarmony = null;
+    this.harmonyRegionEls = [];
     this.harmonySegmentEls = [];
   }
 
@@ -34,19 +37,23 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.harmonyCard = create("section", "audio-harmony-card");
     this.harmonyCard.hidden = true;
     const heading = create("div", "audio-harmony-heading");
-    heading.append(
-      create("div", "timeline-title", "AUDIO HARMONIC TIMELINE · inferred chord segments"),
-      create("div", "audio-harmony-evidence", "INFERRED FROM AUDIO")
-    );
+    this.harmonyTitle = create("div", "timeline-title", "HARMONIC REGION TIMELINE");
+    this.harmonyEvidence = create("div", "audio-harmony-evidence", "INFERRED FROM AUDIO");
+    heading.append(this.harmonyTitle, this.harmonyEvidence);
     const now = create("div", "audio-harmony-now");
     this.harmonyCurrent = create("div", "audio-harmony-current", "—");
     this.harmonyFunction = create("div", "audio-harmony-function", "No audio segmentation loaded.");
     this.harmonyAlternatives = create("div", "audio-harmony-alternatives", "");
     now.append(this.harmonyCurrent, this.harmonyFunction, this.harmonyAlternatives);
-    this.harmonyTrack = create("div", "audio-harmony-track");
-    this.harmonyTrack.setAttribute("aria-label", "Inferred harmonic segments");
+    this.harmonyTrack = create("div", "audio-harmony-track audio-harmony-region-track");
+    this.harmonyTrack.setAttribute("aria-label", "Inferred harmonic regions");
+    this.harmonyDetail = create("details", "audio-harmony-detail");
+    const detailSummary = create("summary", "audio-harmony-detail-summary", "Micro-segment detail");
+    this.harmonyMicroTrack = create("div", "audio-harmony-track audio-harmony-micro-track");
+    this.harmonyMicroTrack.setAttribute("aria-label", "Inferred harmonic micro-segments");
+    this.harmonyDetail.append(detailSummary, this.harmonyMicroTrack);
     this.harmonySummary = create("div", "audio-harmony-summary", "");
-    this.harmonyCard.append(heading, now, this.harmonyTrack, this.harmonySummary);
+    this.harmonyCard.append(heading, now, this.harmonyTrack, this.harmonyDetail, this.harmonySummary);
     const footer = this.root.querySelector(".hhv-footer");
     if (footer) this.root.insertBefore(this.harmonyCard, footer);
     else this.root.appendChild(this.harmonyCard);
@@ -56,9 +63,12 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     const generation = super.beginLoad(status);
     this.currentCollection = null;
     this.audioHarmony = null;
+    this.scoreHarmony = null;
+    this.harmonyRegionEls = [];
     this.harmonySegmentEls = [];
     if (this.harmonyCard) this.harmonyCard.hidden = true;
     if (this.harmonyTrack) this.harmonyTrack.innerHTML = "";
+    if (this.harmonyMicroTrack) this.harmonyMicroTrack.innerHTML = "";
     if (this.primaryDiagnosticLabel) this.primaryDiagnosticLabel.textContent = "CURRENT FIELD";
     return generation;
   }
