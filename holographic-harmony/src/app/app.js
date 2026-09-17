@@ -1,4 +1,5 @@
 import { parseMusicXML } from "../music/musicxml.js";
+import { analyzeLocalAudioFile, classifyLocalMusicFile } from "../music/local-audio.js";
 import { complementField, fieldLabel, validatePartition } from "../theory/fields.js";
 import { computePitchClassActivity } from "../theory/activity.js";
 import { computeAdmissionHistory, compareAdmissionOrder } from "../theory/admissions.js";
@@ -6,6 +7,9 @@ import { inferScaleCandidates, crystallizationSupport } from "../theory/inferenc
 import { pitchClassName } from "../theory/pitch.js";
 import { PitchCircle } from "../visualization/pitch-circle.js";
 import { HolographicTimeline } from "../visualization/timeline.js";
+
+const LOCAL_TRACK_ID = "__local_music__";
+const LOCAL_FILE_ACCEPT = "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.musicxml,.xml";
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return "0:00";
@@ -34,6 +38,8 @@ export class HolographicHarmonyApp {
     this.shadowField = [];
     this.duration = 0;
     this.lastRenderTime = -1;
+    this.localFile = null;
+    this.localObjectUrl = null;
     this.buildUI();
     this.bindEvents();
   }
@@ -50,7 +56,7 @@ export class HolographicHarmonyApp {
 
     const controls = create("section", "controls-panel");
     const selectorWrap = create("label", "track-selector");
-    selectorWrap.append(create("span", "control-label", "Composition"));
+    selectorWrap.append(create("span", "control-label", "Demo composition"));
     this.trackSelect = create("select", "");
     for (const track of this.tracks) {
       const option = document.createElement("option");
@@ -60,8 +66,20 @@ export class HolographicHarmonyApp {
     }
     selectorWrap.appendChild(this.trackSelect);
 
+    const sourceActions = create("div", "source-actions");
+    this.openFileButton = create("button", "open-file-button", "Open music");
+    this.openFileButton.type = "button";
+    this.openFileButton.setAttribute("aria-label", "Open music from this device");
+    this.fileInput = document.createElement("input");
+    this.fileInput.type = "file";
+    this.fileInput.accept = LOCAL_FILE_ACCEPT;
+    this.fileInput.className = "local-file-input";
+    this.fileInput.setAttribute("aria-label", "Choose a local music file");
     this.modeBadge = create("div", "mode-badge", "PAPER MODE");
-    controls.append(selectorWrap, this.modeBadge);
+    sourceActions.append(this.openFileButton, this.fileInput, this.modeBadge);
+    controls.append(selectorWrap, sourceActions);
+
+    this.sourceNote = create("div", "local-source-note", "Open a local audio or MusicXML file. The file is analyzed in this browser and is not uploaded by Harmonic Savant.");
 
     const visualGrid = create("section", "visual-grid");
     const circleCard = create("div", "circle-card");
@@ -108,16 +126,30 @@ export class HolographicHarmonyApp {
     this.audio.preload = "metadata";
 
     const footer = create("footer", "hhv-footer");
-    footer.textContent = "Measured pitch facts and exact set relations are separated from tonal interpretation.";
+    footer.textContent = "Measured score facts, inferred audio features, exact set relations, and tonal interpretation are labeled separately.";
 
-    this.root.append(header, controls, visualGrid, transport, timelineCard, this.audio, footer);
+    this.root.append(header, controls, this.sourceNote, visualGrid, transport, timelineCard, this.audio, footer);
     this.timeline = new HolographicTimeline(this.timelineCanvas, (seconds) => this.seekTo(seconds));
   }
 
   bindEvents() {
-    this.trackSelect.addEventListener("change", () => this.loadTrack(this.trackSelect.value));
+    this.trackSelect.addEventListener("change", () => {
+      if (this.trackSelect.value === LOCAL_TRACK_ID && this.localFile) {
+        this.loadLocalFile(this.localFile);
+      } else {
+        this.loadTrack(this.trackSelect.value);
+      }
+    });
+    this.openFileButton.addEventListener("click", () => this.fileInput.click());
+    this.fileInput.addEventListener("change", async () => {
+      const file = this.fileInput.files?.[0] || null;
+      this.fileInput.value = "";
+      if (!file) return;
+      this.localFile = file;
+      await this.loadLocalFile(file);
+    });
     this.playButton.addEventListener("click", async () => {
-      if (!this.currentTrack) return;
+      if (!this.currentTrack || this.playButton.disabled) return;
       if (this.audio.paused) {
         await this.audio.play();
       } else {
@@ -148,22 +180,47 @@ export class HolographicHarmonyApp {
     await this.loadTrack(this.trackSelect.value || this.tracks[0].id);
   }
 
-  async loadTrack(trackId) {
-    const track = this.tracks.find((t) => t.id === trackId);
-    if (!track) throw new Error(`Unknown track: ${trackId}`);
+  ensureLocalOption(fileName) {
+    let option = Array.from(this.trackSelect.options).find((item) => item.value === LOCAL_TRACK_ID);
+    if (!option) {
+      option = document.createElement("option");
+      option.value = LOCAL_TRACK_ID;
+      this.trackSelect.appendChild(option);
+    }
+    option.textContent = `Local · ${fileName}`;
+    this.trackSelect.value = LOCAL_TRACK_ID;
+  }
 
+  releaseLocalObjectUrl() {
+    if (!this.localObjectUrl) return;
+    URL.revokeObjectURL(this.localObjectUrl);
+    this.localObjectUrl = null;
+  }
+
+  beginLoad(status = "LOADING") {
     const generation = ++this.generation;
     this.stopAnimation();
     this.audio.pause();
     this.abortController?.abort();
     this.abortController = new AbortController();
-    this.status.textContent = "LOADING";
+    this.status.textContent = status;
     this.currentTrack = null;
     this.notes = [];
     this.activeField = [];
     this.shadowField = [];
     this.duration = 0;
+    this.playButton.disabled = false;
     this.resetDiagnostics();
+    return generation;
+  }
+
+  async loadTrack(trackId) {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (!track) throw new Error(`Unknown track: ${trackId}`);
+
+    const generation = this.beginLoad("LOADING");
+    this.releaseLocalObjectUrl();
+    this.sourceNote.textContent = "Demo material is bundled with the app. Use Open music to analyze a file from this device.";
 
     try {
       const scoreResponse = await fetch(track.score, { signal: this.abortController.signal });
@@ -197,6 +254,108 @@ export class HolographicHarmonyApp {
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
+    }
+  }
+
+  async loadLocalFile(file) {
+    const kind = classifyLocalMusicFile(file);
+    this.ensureLocalOption(file.name || "untitled");
+    if (kind === "audio") return this.loadLocalAudio(file);
+    if (kind === "musicxml") return this.loadLocalMusicXML(file);
+    const error = new Error("Unsupported local file. Choose a browser-decodable audio file, .musicxml, or .xml file.");
+    this.status.textContent = "ERROR";
+    this.fieldEl.textContent = error.message;
+    this.sourceNote.textContent = error.message;
+    return null;
+  }
+
+  async loadLocalAudio(file) {
+    const generation = this.beginLoad("ANALYZING");
+    this.releaseLocalObjectUrl();
+    this.ensureLocalOption(file.name || "local audio");
+    this.modeBadge.textContent = "LOCAL AUDIO · INFERRED";
+    this.sourceNote.textContent = `Analyzing ${file.name} locally. Audio-derived pitch classes are inferred evidence, not score transcription.`;
+
+    try {
+      const analysis = await analyzeLocalAudioFile(file);
+      if (generation !== this.generation) return;
+      const overallCandidate = inferScaleCandidates(analysis.overallChroma, 1)[0];
+      this.notes = [...analysis.events];
+      this.activeField = overallCandidate?.pcs ? [...overallCandidate.pcs] : [0, 2, 4, 5, 7, 9, 11];
+      this.shadowField = complementField(this.activeField);
+      const partition = validatePartition(this.activeField, this.shadowField);
+      if (!partition.valid) throw new Error("Active/shadow partition failed Z12 invariant");
+
+      this.localObjectUrl = URL.createObjectURL(file);
+      this.currentTrack = Object.freeze({
+        id: LOCAL_TRACK_ID,
+        title: file.name,
+        audio: this.localObjectUrl,
+        audioOffset: 0,
+        durationHint: analysis.durationSeconds,
+        local: true,
+        evidenceClass: analysis.evidenceClass,
+        analysis: Object.freeze({ mode: "adaptive" })
+      });
+      this.audio.src = this.localObjectUrl;
+      this.audio.currentTime = 0;
+      this.audio.load();
+      this.duration = analysis.durationSeconds;
+      this.playButton.disabled = false;
+      this.status.textContent = "READY";
+      this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} chroma frames · inferred-from-audio evidence. Nothing was uploaded by Harmonic Savant.`;
+      this.renderAt(0, true);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      console.error(error);
+      this.status.textContent = "ERROR";
+      this.fieldEl.textContent = error.message;
+      this.sourceNote.textContent = `${error.message} Some protected/DRM library tracks cannot be opened by a web browser.`;
+    }
+  }
+
+  async loadLocalMusicXML(file) {
+    const generation = this.beginLoad("PARSING SCORE");
+    this.releaseLocalObjectUrl();
+    this.ensureLocalOption(file.name || "local score");
+    this.modeBadge.textContent = "LOCAL SCORE · MEASURED";
+    this.sourceNote.textContent = `Parsing ${file.name} locally.`;
+
+    try {
+      const xml = await file.text();
+      if (generation !== this.generation) return;
+      const parsed = parseMusicXML(xml, globalThis.DOMParser, { trackId: `local:${file.name}` });
+      if (generation !== this.generation) return;
+      this.notes = parsed.notes;
+      const initialActivity = computePitchClassActivity(this.notes, Math.min(8, parsed.durationSeconds));
+      this.activeField = inferScaleCandidates(initialActivity.raw, 1)[0]?.pcs || [0, 2, 4, 5, 7, 9, 11];
+      this.shadowField = complementField(this.activeField);
+      const partition = validatePartition(this.activeField, this.shadowField);
+      if (!partition.valid) throw new Error("Active/shadow partition failed Z12 invariant");
+
+      this.currentTrack = Object.freeze({
+        id: LOCAL_TRACK_ID,
+        title: file.name,
+        audio: null,
+        audioOffset: 0,
+        durationHint: parsed.durationSeconds,
+        local: true,
+        evidenceClass: "measured-from-score",
+        analysis: Object.freeze({ mode: "adaptive" })
+      });
+      this.audio.removeAttribute("src");
+      this.audio.load();
+      this.duration = parsed.durationSeconds;
+      this.playButton.disabled = true;
+      this.status.textContent = "READY";
+      this.sourceNote.textContent = `${file.name} · ${parsed.notes.length} score notes parsed locally. Score facts are measured; tonal context remains interpretive. Playback requires an audio file.`;
+      this.renderAt(0, true);
+    } catch (error) {
+      if (generation !== this.generation) return;
+      console.error(error);
+      this.status.textContent = "ERROR";
+      this.fieldEl.textContent = error.message;
+      this.sourceNote.textContent = error.message;
     }
   }
 
