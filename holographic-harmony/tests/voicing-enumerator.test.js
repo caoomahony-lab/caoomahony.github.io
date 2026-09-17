@@ -82,7 +82,9 @@ test("enumeration is deterministic and obeys hard candidate bounds", () => {
   const second = enumerateVoicings(C_MAJOR, options);
   assert.equal(first.length, 25);
   assert.deepEqual(first.map((item) => item.midi), second.map((item) => item.midi));
-  assert.equal(first.searchMetadata, undefined);
+  assert.equal(first.searchMetadata.truncatedByCandidateLimit, true);
+  assert.equal(first.searchMetadata.truncatedBySearchLimit, false);
+  assert.ok(first.searchMetadata.searchNodes <= options.maxSearchNodes);
 });
 
 test("voice-leading ranker reuses HHF-017 geometry and favors nearby voicings", () => {
