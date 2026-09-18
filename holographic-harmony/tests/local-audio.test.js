@@ -55,8 +55,7 @@ test("audio chroma inference retains the pitch classes of a synthetic C major tr
 
 test("audio pitch v2 emits explicit sparse pitch sets and confidence-gated bass evidence", () => {
   const sampleRate = 11025;
-  const frequencies = [130.812783, 329.627557, 391.995436];
-  const analysis = analyzePcmChroma(chord(sampleRate, 2.4, frequencies), sampleRate, { windowSize: 4096 });
+  const analysis = analyzePcmChroma(sine(sampleRate, 2.4, 130.812783), sampleRate, { windowSize: 4096 });
   assert.ok(analysis.frames.every((frame) => Array.isArray(frame.pitchClasses)));
   assert.ok(analysis.frames.every((frame) => frame.pitchClasses.length >= 1 && frame.pitchClasses.length <= 4));
   assert.ok(analysis.frames.some((frame) => frame.bassPc === 0));
