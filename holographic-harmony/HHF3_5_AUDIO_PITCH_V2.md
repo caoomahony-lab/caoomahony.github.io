@@ -64,3 +64,22 @@ Defaults:
 - smoothness penalty to discourage gratuitous timing jumps.
 
 The existing global comparison remains available and unchanged in meaning. The local path is an additive diagnostic, not a score-guided correction.
+
+
+## Accepted implementation verification
+
+Core implementation head before this documentation-only checkpoint: `dbd5a0a775c41b50e06ddb13e720bf9baf4d13dd`
+
+GitHub Actions run: `35298000641`
+
+```text
+npm test
+173 passed / 0 failed
+
+npm run build
+PASS — Built static ES-module distribution in dist/
+```
+
+The CI suite covers the new pitch-evidence selector, bass confidence gating, bass propagation through micro-segments and harmonic regions, and constrained local timing alignment. The prior HHF-3.4 production SHA remains unchanged until this HHF-3.5 checkpoint is explicitly deployed.
+
+Private user audio and MusicXML were not committed.
