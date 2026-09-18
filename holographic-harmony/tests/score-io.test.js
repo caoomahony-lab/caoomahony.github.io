@@ -7,6 +7,7 @@ function textFile(name,type,text){ return {name,type,async text(){return text;}}
 
 test("score I/O classifies MusicXML MXL and MIDI separately", () => {
   assert.equal(classifyScoreFile({name:"a.musicxml",type:""}),"musicxml");
+  assert.equal(classifyScoreFile({name:"a.musicxml",type:"application/vnd.recordare.musicxml+xml"}),"musicxml");
   assert.equal(classifyScoreFile({name:"a.xml",type:"application/xml"}),"musicxml");
   assert.equal(classifyScoreFile({name:"a.mxl",type:""}),"mxl");
   assert.equal(classifyScoreFile({name:"a.mid",type:"audio/midi"}),"midi");
