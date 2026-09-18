@@ -39,3 +39,27 @@ The local picker accepts audio, `.musicxml/.xml`, `.mxl`, and `.mid/.midi`.
 The built-in converter exposes **Save MusicXML**, **Extract MusicXML**, or **Export MusicXML** according to source type.
 
 All conversion occurs in-browser. No user score or audio is uploaded.
+
+
+## Accepted implementation verification
+
+Implementation head before this documentation-only checkpoint: `eba0da14912dfa775c4dec62501941f1b5798052`
+
+GitHub Actions run: `35308854217`
+
+```text
+npm test
+180 passed / 0 failed
+
+npm run build
+PASS — Built static ES-module distribution in dist/
+```
+
+Verified coverage includes:
+- PPQ MIDI import and SMPTE fail-closed behavior;
+- MusicXML export round-trip for pitch and quarter-beat timing;
+- DEFLATE-compressed MXL root extraction through `META-INF/container.xml`;
+- official plain-vs-compressed MusicXML MIME distinction;
+- phone-facing converter controls and accepted file extensions.
+
+Private user music was not committed or uploaded.
