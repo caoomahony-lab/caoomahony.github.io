@@ -9,7 +9,7 @@ export function classifyScoreFile(file){
   if(!file) return "unknown";
   const ext=extension(file.name), type=String(file.type||"").toLowerCase();
   if(ext==="mid"||ext==="midi"||/audio\/midi|audio\/x-midi|application\/x-midi/.test(type)) return "midi";
-  if(ext==="mxl"||type.includes("vnd.recordare.musicxml")) return "mxl";
+  if(ext==="mxl"||type==="application/vnd.recordare.musicxml") return "mxl";
   if(ext==="musicxml"||ext==="xml"||type.includes("xml")) return "musicxml";
   return "unknown";
 }
