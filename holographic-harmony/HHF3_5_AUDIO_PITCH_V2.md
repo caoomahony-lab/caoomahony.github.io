@@ -49,3 +49,18 @@ The bass channel is deliberately selective. At its default confidence gate it pr
 ## Next verification
 
 Run the full repository tests/build through CI. If green, evaluate harmonic-region/root metrics with the private pair and add constrained local timing alignment as a separate validation-only change.
+
+
+## Validation-only local timing alignment
+
+HHF-3.5 also adds a constrained windowed offset path above the existing global audio-minus-score offset. The local path is used only to diagnose performance timing drift. It is not fed back into pitch, bass, chord, region, or function inference.
+
+Defaults:
+
+- 8 s validation windows;
+- +/-1.5 s search around the global offset;
+- 0.1 s offset grid;
+- maximum 0.6 s offset change per adjacent window;
+- smoothness penalty to discourage gratuitous timing jumps.
+
+The existing global comparison remains available and unchanged in meaning. The local path is an additive diagnostic, not a score-guided correction.
