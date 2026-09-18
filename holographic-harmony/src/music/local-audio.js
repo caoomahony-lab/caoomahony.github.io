@@ -19,7 +19,7 @@ export function classifyLocalMusicFile(file) {
   const extension = name.includes(".") ? name.split(".").pop() : "";
   const type = String(file.type || "").toLowerCase();
   if (MIDI_EXTENSIONS.has(extension) || /audio\/midi|audio\/x-midi|application\/x-midi/.test(type)) return "midi";
-  if (MXL_EXTENSIONS.has(extension) || type.includes("vnd.recordare.musicxml")) return "mxl";
+  if (MXL_EXTENSIONS.has(extension) || type === "application/vnd.recordare.musicxml") return "mxl";
   if (type.startsWith("audio/") || AUDIO_EXTENSIONS.has(extension)) return "audio";
   if (type.includes("xml") || SCORE_EXTENSIONS.has(extension)) return "musicxml";
   return "unknown";
