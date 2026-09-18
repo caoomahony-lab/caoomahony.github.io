@@ -247,8 +247,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.referenceResults.hidden = false;
   }
 
-  async loadLocalMusicXML(file) {
-    await super.loadLocalMusicXML(file);
+  async loadLocalScore(file) {
+    await super.loadLocalScore(file);
     if (
       this.currentTrack?.id !== LOCAL_TRACK_ID ||
       this.currentTrack?.title !== file.name ||
@@ -257,7 +257,11 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
 
     try {
       this.scoreHarmony = inferScoreHarmony(this.notes);
-      this.sourceNote.textContent = `${file.name} · ${this.notes.length} score notes parsed locally · ${this.scoreHarmony.regionCount} measured sonority regions. Note content and bass are measured; chord/root/function labels remain inferred. Playback requires an audio file.`;
+      const format = this.currentTrack?.scoreSourceFormat || "musicxml";
+      const sourceMeaning = format === "midi"
+        ? "pitch/timing/velocity are encoded MIDI events; chord/root/function labels are inferred"
+        : "note content and bass are measured from MusicXML; chord/root/function labels are inferred";
+      this.sourceNote.textContent = `${file.name} · ${this.notes.length} note events · ${this.scoreHarmony.regionCount} sonority regions · ${sourceMeaning}. MusicXML export is ready. Playback requires audio.`;
       this.renderHarmonicTimeline();
       this.renderHarmonicAt(0);
     } catch (error) {
@@ -340,7 +344,10 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     const context = (this.audioHarmony.regionHarmonicAnalysis || this.audioHarmony.harmonicAnalysis)
       ?.contextualFunction?.hypotheses?.[0] || null;
     const contextText = context ? `${pitchClassName(context.centerPc)} ${context.systemName}` : "context unresolved";
-    this.harmonySummary.textContent = `${microSegments.length} micro-segments → ${primary.length} harmonic regions · ${contextText} · chord/root/quality inferred · bass unavailable in chroma v1.`;
+    const bassText = this.audioHarmony?.regions?.some((region) => region.bassPc != null)
+      ? "bass inferred when low-frequency evidence is confident"
+      : "bass unresolved/ambiguous";
+    this.harmonySummary.textContent = `${microSegments.length} micro-segments → ${primary.length} harmonic regions · ${contextText} · chord/root/quality inferred · ${bassText}.`;
   }
 
   renderHarmonicAt(timeSeconds) {
