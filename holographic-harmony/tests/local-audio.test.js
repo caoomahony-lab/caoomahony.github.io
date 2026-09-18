@@ -25,6 +25,7 @@ test("local music picker recognizes common phone audio and MusicXML without trea
   assert.equal(classifyLocalMusicFile({ name: "song.m4a", type: "audio/mp4" }), "audio");
   assert.equal(classifyLocalMusicFile({ name: "song.FLAC", type: "" }), "audio");
   assert.equal(classifyLocalMusicFile({ name: "score.musicxml", type: "application/xml" }), "musicxml");
+  assert.equal(classifyLocalMusicFile({ name: "score.musicxml", type: "application/vnd.recordare.musicxml+xml" }), "musicxml");
   assert.equal(classifyLocalMusicFile({ name: "score.mxl", type: "application/vnd.recordare.musicxml" }), "mxl");
   assert.equal(classifyLocalMusicFile({ name: "sequence.mid", type: "audio/midi" }), "midi");
   assert.equal(classifyLocalMusicFile({ name: "sequence.MIDI", type: "" }), "midi");
