@@ -64,12 +64,16 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser, opt
   const partNodes = Array.from(doc.getElementsByTagName("part") || []);
   const rawNotes = [];
   const tempoEvents = [];
+  const timeSignatureEvents = [];
+  const measureMap = [];
   let globalEndQ = 0;
 
   partNodes.forEach((part, partIndex) => {
     const partId = part.getAttribute?.("id") || String(partIndex + 1);
     let divisions = 1;
     let measureStartQ = 0;
+    let beats = 4;
+    let beatType = 4;
     const measures = childrenByTag(part, "measure");
 
     measures.forEach((measure, measureIndex) => {
@@ -77,6 +81,16 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser, opt
       if (attributes) {
         const newDivisions = numberOf(attributes, "divisions", divisions);
         if (newDivisions > 0) divisions = newDivisions;
+        const time = firstChild(attributes, "time");
+        if (time) {
+          const nextBeats = Number(textOf(time, "beats", beats));
+          const nextBeatType = Number(textOf(time, "beat-type", beatType));
+          if (nextBeats > 0 && nextBeatType > 0) {
+            beats = nextBeats;
+            beatType = nextBeatType;
+            timeSignatureEvents.push({ qBeat: measureStartQ, beats, beatType, partIndex });
+          }
+        }
       }
 
       let cursorDiv = 0;
@@ -159,7 +173,18 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser, opt
       }
 
       const measureLengthQ = maxCursorDiv / divisions;
-      measureStartQ += measureLengthQ;
+      const measureEndQ = measureStartQ + measureLengthQ;
+      measureMap.push(Object.freeze({
+        partIndex,
+        partId,
+        measureIndex: measureIndex + 1,
+        measureNumber: measure.getAttribute?.("number") || String(measureIndex + 1),
+        startQ: measureStartQ,
+        endQ: measureEndQ,
+        beats,
+        beatType
+      }));
+      measureStartQ = measureEndQ;
       globalEndQ = Math.max(globalEndQ, measureStartQ);
     });
   });
@@ -175,8 +200,12 @@ export function parseMusicXML(xmlText, DOMParserImpl = globalThis.DOMParser, opt
     eventsV1,
     eventSchemaVersion: NOTE_EVENT_SCHEMA_VERSION,
     tempoEvents: tempos,
+    timeSignatureEvents: Object.freeze([...timeSignatureEvents]),
+    measureMap: Object.freeze(measureMap),
     durationSeconds,
     durationQuarterBeats: globalEndQ,
-    parts: partNodes.length
+    parts: partNodes.length,
+    sourceFormat: "musicxml",
+    evidenceClass: "measured-from-score"
   };
 }
