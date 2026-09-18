@@ -24,10 +24,10 @@ Add local, phone-friendly score conversion without pretending the current audio 
 - exports the exact embedded MusicXML root document.
 
 ### MIDI → MusicXML
-- parses Standard MIDI PPQ timing, note events, running status, velocity, tempo, meter, tracks and channels;
+- parses Standard MIDI PPQ timing, note events, running status, velocity, tempo, meter, tracks and channels into the local canonical event model;
 - rejects SMPTE-time files rather than guessing;
 - converts MIDI into existing canonical NoteEventV1 events;
-- generates MusicXML locally with `encoded-from-midi` provenance;
+- generates MusicXML locally with `encoded-from-midi` provenance, focused on pitch/timing/tempo/meter rather than preserving every performance controller or original engraving detail;
 - generated notation is an analysis representation, not a claim to reproduce original engraving or authored voices.
 
 ### Audio
