@@ -172,3 +172,36 @@ select {
   .time-readout { min-width: 78px; font-size: 11px; }
   .local-source-note { font-size: 10.5px; }
 }
+
+
+.score-converter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.035);
+}
+.score-converter-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  opacity: 0.78;
+}
+.score-converter-status {
+  flex: 1 1 260px;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0.75;
+}
+.score-export-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+@media (max-width: 520px) {
+  .score-converter { align-items: stretch; }
+  .score-export-button { width: 100%; }
+}
