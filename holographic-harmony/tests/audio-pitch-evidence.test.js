@@ -4,8 +4,11 @@ import {
   combinePitchEvidence,
   selectAdaptivePitchClasses,
   inferBassEvidence,
+  registeredMidiSalience,
+  inferRegisteredFrameNotes,
   AUDIO_PITCH_EVIDENCE_VERSION,
-  AUDIO_BASS_EVIDENCE_VERSION
+  AUDIO_BASS_EVIDENCE_VERSION,
+  AUDIO_REGISTERED_NOTE_VERSION
 } from "../src/music/audio-pitch-evidence.js";
 
 test("v2 pitch evidence keeps sparse evidence sparse", () => {
@@ -29,4 +32,29 @@ test("bass evidence is withheld when the low-frequency winner is ambiguous", () 
   assert.equal(inferBassEvidence(confident).bassPc, 0);
   assert.equal(inferBassEvidence(ambiguous).bassPc, null);
   assert.equal(AUDIO_BASS_EVIDENCE_VERSION, "audio-bass-evidence-v1");
+});
+
+
+test("registered MIDI salience favors the actual octave over its subharmonic candidate", () => {
+  const sampleRate = 11025;
+  const windowSize = 4096;
+  const magnitudes = new Float64Array(windowSize / 2 + 1);
+  const frequency = 220;
+  const bin = Math.round(frequency * windowSize / sampleRate);
+  magnitudes[bin] = 100;
+
+  const ranked = registeredMidiSalience(magnitudes, sampleRate, windowSize)
+    .slice()
+    .sort((a, b) => b.confidence - a.confidence || a.midi - b.midi);
+  assert.equal(ranked[0].midi, 57);
+  assert.equal(AUDIO_REGISTERED_NOTE_VERSION, "audio-registered-note-v1");
+
+  const notes = inferRegisteredFrameNotes(
+    magnitudes,
+    sampleRate,
+    windowSize,
+    { pitchClasses: [9], bassPc: 9 }
+  );
+  assert.ok(notes.some((note) => note.midi === 57));
+  assert.ok(notes.every((note) => note.pitchClass === 9));
 });
