@@ -1,5 +1,6 @@
 export const AUDIO_PITCH_EVIDENCE_VERSION = "audio-pitch-evidence-v2";
 export const AUDIO_BASS_EVIDENCE_VERSION = "audio-bass-evidence-v1";
+export const AUDIO_REGISTERED_NOTE_VERSION = "audio-registered-note-v1";
 
 function normalizeMax(valuesRaw) {
   const values = Array.from({ length: 12 }, (_, pc) => Math.max(0, Number(valuesRaw?.[pc]) || 0));
@@ -140,4 +141,142 @@ export function buildAudioPitchEvidence({
     bassConfidence: bass.confidence,
     bassEvidenceClass: bass.evidenceClass
   });
+}
+
+
+function validateSpectralInputs(magnitudes, sampleRateRaw, windowSizeRaw) {
+  const sampleRate = Number(sampleRateRaw);
+  const windowSize = Number(windowSizeRaw);
+  if (!magnitudes?.length || !Number.isFinite(sampleRate) || sampleRate <= 0 || !Number.isFinite(windowSize) || windowSize <= 0) {
+    throw new TypeError("registered-note evidence requires magnitudes, sampleRate, and windowSize");
+  }
+  return { sampleRate, windowSize };
+}
+
+export function registeredMidiSalience(magnitudes, sampleRateRaw, windowSizeRaw, options = {}) {
+  const { sampleRate, windowSize } = validateSpectralInputs(magnitudes, sampleRateRaw, windowSizeRaw);
+  const midiMin = Math.max(0, Math.round(Number(options.registeredMidiMin ?? 33)));
+  const midiMax = Math.min(127, Math.round(Number(options.registeredMidiMax ?? 96)));
+  if (midiMax < midiMin) throw new RangeError("registeredMidiMax must be >= registeredMidiMin");
+
+  const harmonicWeights = options.registeredHarmonicWeights || [1, 0.45, 0.28, 0.18];
+  const rows = [];
+
+  for (let midi = midiMin; midi <= midiMax; midi += 1) {
+    const fundamentalHz = 440 * Math.pow(2, (midi - 69) / 12);
+    if (fundamentalHz >= sampleRate / 2) break;
+
+    const fundamentalExcess = localPeakAboveFloor(magnitudes, fundamentalHz, sampleRate, windowSize);
+    const fundamental = Math.sqrt(fundamentalExcess);
+    let partialSupport = 0;
+
+    for (let harmonic = 2; harmonic <= harmonicWeights.length; harmonic += 1) {
+      const frequency = fundamentalHz * harmonic;
+      if (frequency >= sampleRate / 2) break;
+      const excess = localPeakAboveFloor(magnitudes, frequency, sampleRate, windowSize);
+      partialSupport += Number(harmonicWeights[harmonic - 1] || 0) * Math.sqrt(excess);
+    }
+
+    const rawScore = 0.82 * fundamental + 0.18 * partialSupport;
+    const fundamentalShare = rawScore > 0
+      ? fundamental / Math.max(fundamental + partialSupport, 1e-12)
+      : 0;
+    const subharmonicGuard = 0.25 + 0.75 * fundamentalShare;
+    rows.push({
+      midi,
+      pitchClass: ((midi % 12) + 12) % 12,
+      rawScore: rawScore * subharmonicGuard,
+      fundamentalShare
+    });
+  }
+
+  const max = Math.max(...rows.map((row) => row.rawScore), 1e-12);
+  return Object.freeze(rows.map((row) => Object.freeze({
+    ...row,
+    confidence: row.rawScore / max
+  })));
+}
+
+export function inferRegisteredFrameNotes(
+  magnitudes,
+  sampleRateRaw,
+  windowSizeRaw,
+  {
+    pitchClasses = null,
+    bassPc = null,
+    options = {}
+  } = {}
+) {
+  const salience = registeredMidiSalience(magnitudes, sampleRateRaw, windowSizeRaw, options);
+  const requestedPcs = Array.isArray(pitchClasses) && pitchClasses.length
+    ? [...new Set(pitchClasses.map((pc) => ((Number(pc) % 12) + 12) % 12))]
+    : [...new Set(
+      salience
+        .slice()
+        .sort((a, b) => b.confidence - a.confidence || a.midi - b.midi)
+        .slice(0, Math.max(1, Number(options.maxRegisteredNotesPerFrame ?? 6)))
+        .map((row) => row.pitchClass)
+    )];
+
+  const minimumConfidence = Number(options.registeredMinimumConfidence ?? 0.34);
+  const octaveDoublingRatio = Number(options.registeredOctaveDoublingRatio ?? 0.88);
+  const octaveDoublingFloor = Number(options.registeredOctaveDoublingFloor ?? 0.58);
+  const allowOctaveDoubling = options.allowRegisteredOctaveDoubling !== false;
+  const selected = [];
+
+  for (const pc of requestedPcs) {
+    const candidates = salience
+      .filter((row) => row.pitchClass === pc)
+      .sort((a, b) => b.confidence - a.confidence || a.midi - b.midi);
+    const lead = candidates[0];
+    if (!lead || lead.confidence < minimumConfidence) continue;
+    selected.push(lead);
+
+    if (allowOctaveDoubling) {
+      const second = candidates.find((row) => row.midi !== lead.midi);
+      if (
+        second &&
+        second.confidence >= octaveDoublingFloor &&
+        second.confidence >= lead.confidence * octaveDoublingRatio
+      ) {
+        selected.push(second);
+      }
+    }
+
+    if (bassPc != null && pc === ((Number(bassPc) % 12) + 12) % 12) {
+      const bassMidiMax = Number(options.registeredBassMidiMax ?? 60);
+      const lower = candidates
+        .filter((row) => row.midi <= bassMidiMax)
+        .sort((a, b) => b.confidence - a.confidence || a.midi - b.midi)[0];
+      if (
+        lower &&
+        lower.midi !== lead.midi &&
+        lower.confidence >= minimumConfidence &&
+        lower.confidence >= lead.confidence * 0.72
+      ) {
+        selected.push(lower);
+      }
+    }
+  }
+
+  const unique = new Map();
+  for (const row of selected) {
+    const previous = unique.get(row.midi);
+    if (!previous || row.confidence > previous.confidence) unique.set(row.midi, row);
+  }
+  const maxNotes = Math.max(1, Number(options.maxRegisteredNotesPerFrame ?? 6));
+  return Object.freeze(
+    [...unique.values()]
+      .sort((a, b) => b.confidence - a.confidence || a.midi - b.midi)
+      .slice(0, maxNotes)
+      .sort((a, b) => a.midi - b.midi)
+      .map((row) => Object.freeze({
+        midi: row.midi,
+        pitchClass: row.pitchClass,
+        octave: Math.floor(row.midi / 12) - 1,
+        confidence: row.confidence,
+        fundamentalShare: row.fundamentalShare,
+        evidenceClass: "inferred-registered-audio"
+      }))
+  );
 }
