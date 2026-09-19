@@ -339,7 +339,7 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     events,
     registeredNoteEvents,
     registeredFrameShare,
-    note: "Pitch classes use blended spectral and harmonic-salience evidence. Registered MIDI notes are conservative inferred candidates with octave/register, not an authored score transcription. Bass is emitted only when low-frequency evidence clears its ambiguity gate."
+    note: "Pitch classes use blended spectral and harmonic-salience evidence. Registered MIDI notes are conservative inferred candidates with octave/register; this is not a score transcription or authored notation. Bass is emitted only when low-frequency evidence clears its ambiguity gate."
   });
 }
 
