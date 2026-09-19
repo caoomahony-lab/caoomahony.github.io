@@ -69,3 +69,25 @@ The UI therefore reports the number and coverage of inferred registered-note eve
 - audio rhythm/voice notation: not yet claimed.
 
 Private user audio and scores are not committed.
+
+
+## Verification checkpoint
+
+Implementation head before this documentation-only checkpoint: `cf9ba438a94dd9ff88149093174fab2504a16a85`
+
+GitHub Actions run: `35458646589`
+
+```text
+npm test
+183 passed / 0 failed
+
+npm run build
+PASS — Built static ES-module distribution in dist/
+```
+
+Synthetic acceptance verifies:
+- A3 (220 Hz) resolves to MIDI 57;
+- A4 (440 Hz) resolves to MIDI 69;
+- registered note MIDI, pitch class, and octave remain internally consistent;
+- the actual octave outranks a subharmonic candidate;
+- the existing pitch-class and harmonic analysis tests remain green.
