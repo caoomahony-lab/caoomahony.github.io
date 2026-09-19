@@ -1,5 +1,6 @@
 import { rankChordCandidates } from "../theory/chords.js";
 import { analyzeHarmonicObjectSequence } from "../analysis/harmonic-objects.js";
+import { consolidateHarmonicRegions } from "./harmonic-regions.js";
 
 export const AUDIO_HARMONY_VERSION = "audio-harmony-v1";
 
@@ -16,15 +17,14 @@ function normalizeChroma(chroma) {
 function activePitchClasses(chroma, options = {}) {
   const normalized = normalizeChroma(chroma);
   const max = Math.max(...normalized, 1e-12);
-  const relativeFloor = Number(options.relativeFloor ?? 0.34);
-  const maxPitchClasses = Math.max(3, Number(options.maxPitchClasses ?? 5));
+  const relativeFloor = Number(options.relativeFloor ?? 0.60);
+  const maxPitchClasses = Math.max(1, Number(options.maxPitchClasses ?? 4));
   const ordered = normalized
     .map((strength, pc) => ({ pc, strength }))
     .sort((a, b) => b.strength - a.strength || a.pc - b.pc);
   const selected = ordered
     .filter((item, index) => index < maxPitchClasses && item.strength >= max * relativeFloor)
     .map((item) => item.pc);
-  while (selected.length < Math.min(3, ordered.length)) selected.push(ordered[selected.length].pc);
   return Object.freeze([...new Set(selected)].sort((a, b) => a - b));
 }
 
@@ -201,12 +201,20 @@ export function inferAudioHarmonySegments(framesRaw, hopSecondsRaw, options = {}
   const minFrames = Math.max(1, Math.round(Number(options.minSegmentSeconds ?? 0.72) / hopSeconds));
   const labels = suppressShortRuns(path, candidatesByFrame, minFrames);
   const segments = buildSegments(frames, labels, hopSeconds, options);
+  const harmonicRegions = consolidateHarmonicRegions(segments, options.harmonicRegions || options);
   const sequence = segments.map((segment) => ({ pcs: segment.pcs, bassPc: null, weight: segment.duration }));
+  const regionSequence = harmonicRegions.regions.map((region) => ({ pcs: region.pcs, bassPc: null, weight: region.duration }));
   let harmonicAnalysis = null;
+  let regionHarmonicAnalysis = null;
   try {
     harmonicAnalysis = sequence.length ? analyzeHarmonicObjectSequence(sequence) : null;
   } catch {
     harmonicAnalysis = null;
+  }
+  try {
+    regionHarmonicAnalysis = regionSequence.length ? analyzeHarmonicObjectSequence(regionSequence) : null;
+  } catch {
+    regionHarmonicAnalysis = null;
   }
   return Object.freeze({
     version: AUDIO_HARMONY_VERSION,
@@ -215,7 +223,12 @@ export function inferAudioHarmonySegments(framesRaw, hopSecondsRaw, options = {}
     frameCount: frames.length,
     segmentCount: segments.length,
     segments,
+    regionVersion: harmonicRegions.regionVersion,
+    regionCount: harmonicRegions.regionCount,
+    regions: harmonicRegions.regions,
+    harmonicRegions,
     harmonicAnalysis,
+    regionHarmonicAnalysis,
     note: "Chord boundaries, roots, and qualities are inferred from chroma over time; bass identity is not measured by this layer."
   });
 }

@@ -34,6 +34,12 @@ test("audio harmonic segmentation recovers stable C-major then G-major regions",
   assert.equal(result.segments[0].symbol, "C");
   assert.equal(result.segments.at(-1).symbol, "G");
   assert.ok(result.segments.every((segment) => segment.candidates.length >= 2));
+  assert.ok(result.regionCount <= result.segmentCount);
+  assert.equal(result.harmonicRegions.microSegments[0], result.segments[0]);
+  assert.deepEqual(
+    result.regions.flatMap((region) => region.constituentMicroSegmentIndices).sort((a, b) => a - b),
+    result.segments.map((segment) => segment.index)
+  );
 });
 
 test("brief chromatic disturbance does not manufacture a stable chord segment", () => {
@@ -61,11 +67,34 @@ test("audio chord layer preserves ambiguity and does not invent bass evidence", 
   assert.match(result.note, /inferred/i);
 });
 
+test("sparse audio evidence is not padded into a fabricated triad", () => {
+  const hop = 0.25;
+  const input = Array.from({ length: 8 }, (_, index) => ({
+    time: index * hop,
+    chroma: chromaFor([9])
+  }));
+  const result = inferAudioHarmonySegments(input, hop);
+  assert.deepEqual(result.segments[0].observedPitchClasses, [9]);
+  assert.deepEqual(result.regions[0].observedPitchClasses, [9]);
+});
+
 test("browser surface includes the audio harmonic timeline and stylesheet", () => {
   const appSource = fs.readFileSync(new URL("../src/app/collection-aware-app.js", import.meta.url), "utf8");
   const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const styleSource = fs.readFileSync(new URL("../src/styles/audio-harmony.css", import.meta.url), "utf8");
   assert.match(appSource, /AUDIO HARMONIC TIMELINE/);
   assert.match(appSource, /inferAudioHarmonySegments/);
   assert.match(appSource, /relative weights, not probabilities/);
+  assert.match(appSource, /inferScoreHarmony/);
+  assert.match(appSource, /Micro-segment detail/);
+  assert.match(appSource, /micro-segments →/);
+  assert.match(appSource, /Load matching score/);
+  assert.match(appSource, /compareAudioToScore/);
+  assert.match(appSource, /processed locally · nothing uploaded/);
+  assert.match(appSource, /Measured reference: score notes and lowest sounding MIDI/);
+  assert.match(styleSource, /overflow:\s*hidden/);
+  assert.match(styleSource, /overflow-x:\s*auto/);
+  assert.match(styleSource, /audio-reference-controls/);
+  assert.match(styleSource, /audio-reference-grid/);
   assert.match(indexSource, /audio-harmony\.css/);
 });
