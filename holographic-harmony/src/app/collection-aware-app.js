@@ -139,7 +139,11 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
         durationHint: analysis.durationSeconds,
         local: true,
         evidenceClass: analysis.evidenceClass,
-        analysis: Object.freeze({ mode: "adaptive", audioHarmonyVersion: harmony.version })
+        analysis: Object.freeze({
+          mode: "adaptive",
+          audioHarmonyVersion: harmony.version,
+          registeredNoteVersion: analysis.registeredNoteVersion
+        })
       });
       this.audio.src = this.localObjectUrl;
       this.audio.currentTime = 0;
@@ -147,7 +151,10 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.duration = analysis.durationSeconds;
       this.playButton.disabled = false;
       this.status.textContent = "READY";
-      this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} chroma frames · ${harmony.segmentCount} inferred micro-segments → ${harmony.regionCount} inferred harmonic regions. Nothing was uploaded by Harmonic Savant.`;
+      this.clearScoreExport(
+        `Registered-note beta: ${analysis.registeredNoteEvents.length} inferred note events with octave/register across ${Math.round(analysis.registeredFrameShare * 100)}% of analysis frames. Audio → MusicXML remains disabled until rhythm/voice quantization is reliable.`
+      );
+      this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} frames · ${analysis.registeredNoteEvents.length} inferred registered-note events · ${harmony.segmentCount} inferred micro-segments → ${harmony.regionCount} inferred harmonic regions. Nothing was uploaded by Harmonic Savant.`;
       this.renderHarmonicTimeline();
       this.renderAt(0, true);
     } catch (error) {
