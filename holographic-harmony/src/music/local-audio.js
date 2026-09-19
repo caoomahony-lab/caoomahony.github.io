@@ -2,11 +2,13 @@ import { mod12 } from "../theory/pitch.js";
 import {
   AUDIO_PITCH_EVIDENCE_VERSION,
   AUDIO_BASS_EVIDENCE_VERSION,
+  AUDIO_REGISTERED_NOTE_VERSION,
   harmonicPitchClassSalience,
+  inferRegisteredFrameNotes,
   buildAudioPitchEvidence
 } from "./audio-pitch-evidence.js";
 
-export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-pitch-v2";
+export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-pitch-v3";
 
 const AUDIO_EXTENSIONS = new Set(["mp3", "m4a", "aac", "wav", "flac", "ogg", "oga", "opus", "webm"]);
 const SCORE_EXTENSIONS = new Set(["musicxml", "xml"]);
@@ -130,6 +132,67 @@ function frameChromaFromMagnitudes(magnitudes, map) {
   return chroma.map((value) => value / max);
 }
 
+function mergeRegisteredNoteFrames(frames, hopSeconds, options = {}) {
+  const minFrames = Math.max(1, Math.round(Number(options.registeredMinFrames ?? 2)));
+  const gapToleranceFrames = Math.max(0, Math.round(Number(options.registeredGapToleranceFrames ?? 1)));
+  const open = new Map();
+  const events = [];
+
+  const close = (midi) => {
+    const state = open.get(midi);
+    if (!state) return;
+    open.delete(midi);
+    if (state.observedFrames < minFrames) return;
+    const end = state.lastSeenTime + hopSeconds;
+    events.push(Object.freeze({
+      onset: state.onset,
+      duration: Math.max(hopSeconds, end - state.onset),
+      midi,
+      pitchClass: ((midi % 12) + 12) % 12,
+      octave: Math.floor(midi / 12) - 1,
+      confidence: state.confidenceSum / Math.max(1, state.observedFrames),
+      observedFrames: state.observedFrames,
+      evidenceClass: "inferred-registered-audio",
+      isRest: false,
+      tieStart: false,
+      tieStop: false,
+      source: "audio-registered-note"
+    }));
+  };
+
+  frames.forEach((frame, frameIndex) => {
+    const active = new Map((frame.registeredNotes || []).map((note) => [note.midi, note]));
+    for (const [midi, state] of [...open.entries()]) {
+      if (active.has(midi)) continue;
+      state.missedFrames += 1;
+      if (state.missedFrames > gapToleranceFrames) close(midi);
+    }
+
+    for (const [midi, note] of active) {
+      const state = open.get(midi);
+      if (!state) {
+        open.set(midi, {
+          onset: frame.time,
+          lastSeenTime: frame.time,
+          confidenceSum: Number(note.confidence || 0),
+          observedFrames: 1,
+          missedFrames: 0,
+          firstFrame: frameIndex
+        });
+      } else {
+        state.lastSeenTime = frame.time;
+        state.confidenceSum += Number(note.confidence || 0);
+        state.observedFrames += 1;
+        state.missedFrames = 0;
+      }
+    }
+  });
+
+  for (const midi of [...open.keys()]) close(midi);
+  events.sort((a, b) => a.onset - b.onset || a.midi - b.midi);
+  return Object.freeze(events);
+}
+
 function mergeActivityFrames(frames, hopSeconds, threshold, maxPitchClasses) {
   const open = Array(12).fill(null);
   const events = [];
@@ -220,6 +283,16 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     const harmonicChroma = harmonicPitchClassSalience(magnitudes, targetRate, windowSize, options);
     const bassChroma = frameChromaFromMagnitudes(magnitudes, bassMap);
     const evidence = buildAudioPitchEvidence({ baseChroma, harmonicChroma, bassChroma, options });
+    const registeredNotes = inferRegisteredFrameNotes(
+      magnitudes,
+      targetRate,
+      windowSize,
+      {
+        pitchClasses: evidence.pitchClasses,
+        bassPc: evidence.bassPc,
+        options
+      }
+    );
     const chroma = evidence.chroma;
     for (let pc = 0; pc < 12; pc += 1) overall[pc] += chroma[pc];
     frames.push(Object.freeze({
@@ -229,7 +302,8 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
       bassPc: evidence.bassPc,
       bassCandidatePc: evidence.bassCandidatePc,
       bassConfidence: evidence.bassConfidence,
-      bassEvidenceClass: evidence.bassEvidenceClass
+      bassEvidenceClass: evidence.bassEvidenceClass,
+      registeredNotes
     }));
   }
 
@@ -242,11 +316,16 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     Number(options.eventThreshold || 0.60),
     Math.max(1, Number(options.maxPitchClassesPerFrame || 4))
   );
+  const registeredNoteEvents = mergeRegisteredNoteFrames(frames, hopSeconds, options);
+  const registeredFrameShare = frames.length
+    ? frames.filter((frame) => frame.registeredNotes?.length).length / frames.length
+    : 0;
 
   return Object.freeze({
     version: LOCAL_AUDIO_ANALYSIS_VERSION,
     pitchEvidenceVersion: AUDIO_PITCH_EVIDENCE_VERSION,
     bassEvidenceVersion: AUDIO_BASS_EVIDENCE_VERSION,
+    registeredNoteVersion: AUDIO_REGISTERED_NOTE_VERSION,
     evidenceClass: "inferred-from-audio",
     sampleRate: targetRate,
     sourceSampleRate: sourceRate,
@@ -258,7 +337,9 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     overallChroma,
     frames: Object.freeze(frames),
     events,
-    note: "Pitch classes use blended spectral and harmonic-salience evidence. Bass is emitted only when low-frequency evidence clears its ambiguity gate; this is not a score transcription."
+    registeredNoteEvents,
+    registeredFrameShare,
+    note: "Pitch classes use blended spectral and harmonic-salience evidence. Registered MIDI notes are conservative inferred candidates with octave/register; this is not a score transcription or authored notation. Bass is emitted only when low-frequency evidence clears its ambiguity gate."
   });
 }
 
