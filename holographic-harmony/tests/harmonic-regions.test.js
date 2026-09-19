@@ -89,6 +89,15 @@ test("distinct roots and collections are not smeared together", () => {
   assert.equal(result.regionCount, 3);
 });
 
+test("region bass is duration-weighted and withheld when constituent evidence conflicts", () => {
+  const left = { ...segment(0, 0, 2, { rootPc: 0, pcs: [0, 4, 7] }), bassPc: 0, bassConfidence: 0.9 };
+  const right = { ...segment(1, 2, 3, { rootPc: 0, templateId: "major7", pcs: [0, 4, 7, 11] }), bassPc: 4, bassConfidence: 0.2 };
+  const result = consolidateHarmonicRegions([left, right]);
+  assert.equal(result.regionCount, 1);
+  assert.equal(result.regions[0].bassPc, 0);
+  assert.match(result.regions[0].bassEvidence, /low-frequency/);
+});
+
 test("every source micro-segment is represented exactly once without mutation", () => {
   const input = [
     segment(10, 0, 1, { rootPc: 0, pcs: [0, 4, 7] }),

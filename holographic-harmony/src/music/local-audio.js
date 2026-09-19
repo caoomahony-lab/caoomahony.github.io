@@ -1,6 +1,12 @@
 import { mod12 } from "../theory/pitch.js";
+import {
+  AUDIO_PITCH_EVIDENCE_VERSION,
+  AUDIO_BASS_EVIDENCE_VERSION,
+  harmonicPitchClassSalience,
+  buildAudioPitchEvidence
+} from "./audio-pitch-evidence.js";
 
-export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-chroma-v2";
+export const LOCAL_AUDIO_ANALYSIS_VERSION = "audio-pitch-v2";
 
 const AUDIO_EXTENSIONS = new Set(["mp3", "m4a", "aac", "wav", "flac", "ogg", "oga", "opus", "webm"]);
 const SCORE_EXTENSIONS = new Set(["musicxml", "xml"]);
@@ -109,8 +115,7 @@ function spectralMap(windowSize, sampleRate, minHz, maxHz) {
   return bins;
 }
 
-function frameChroma(frame, map) {
-  const magnitudes = fftMagnitudes(frame);
+function frameChromaFromMagnitudes(magnitudes, map) {
   const chroma = Array(12).fill(0);
   for (const item of map) {
     const amplitude = magnitudes[item.bin];
@@ -146,9 +151,12 @@ function mergeActivityFrames(frames, hopSeconds, threshold, maxPitchClasses) {
     const ordered = frame.chroma
       .map((strength, pc) => ({ pc, strength }))
       .sort((a, b) => b.strength - a.strength || a.pc - b.pc);
-    const active = new Set(ordered
-      .filter((item, index) => index < maxPitchClasses && item.strength >= threshold)
-      .map((item) => item.pc));
+    const explicit = Array.isArray(frame.pitchClasses) ? frame.pitchClasses : null;
+    const active = explicit?.length
+      ? new Set(explicit)
+      : new Set(ordered
+        .filter((item, index) => index < maxPitchClasses && item.strength >= threshold)
+        .map((item) => item.pc));
 
     for (let pc = 0; pc < 12; pc += 1) {
       if (!active.has(pc)) {
@@ -188,6 +196,12 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
   const minHz = Number(options.minHz || 55);
   const maxHz = Number(options.maxHz || 3520);
   const map = spectralMap(windowSize, targetRate, minHz, maxHz);
+  const bassMap = spectralMap(
+    windowSize,
+    targetRate,
+    Number(options.bassMinHz || 55),
+    Number(options.bassMaxHz || 330)
+  );
   const frames = [];
   const overall = Array(12).fill(0);
   const frame = new Float64Array(windowSize);
@@ -197,9 +211,22 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
       const hann = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (windowSize - 1));
       frame[i] = samples[start + i] * hann;
     }
-    const chroma = frameChroma(frame, map);
+    const magnitudes = fftMagnitudes(frame);
+    const baseChroma = frameChromaFromMagnitudes(magnitudes, map);
+    const harmonicChroma = harmonicPitchClassSalience(magnitudes, targetRate, windowSize, options);
+    const bassChroma = frameChromaFromMagnitudes(magnitudes, bassMap);
+    const evidence = buildAudioPitchEvidence({ baseChroma, harmonicChroma, bassChroma, options });
+    const chroma = evidence.chroma;
     for (let pc = 0; pc < 12; pc += 1) overall[pc] += chroma[pc];
-    frames.push(Object.freeze({ time: start / targetRate, chroma: Object.freeze(chroma) }));
+    frames.push(Object.freeze({
+      time: start / targetRate,
+      chroma,
+      pitchClasses: evidence.pitchClasses,
+      bassPc: evidence.bassPc,
+      bassCandidatePc: evidence.bassCandidatePc,
+      bassConfidence: evidence.bassConfidence,
+      bassEvidenceClass: evidence.bassEvidenceClass
+    }));
   }
 
   if (!frames.length) throw new Error("audio is too short for chroma analysis");
@@ -214,6 +241,8 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
 
   return Object.freeze({
     version: LOCAL_AUDIO_ANALYSIS_VERSION,
+    pitchEvidenceVersion: AUDIO_PITCH_EVIDENCE_VERSION,
+    bassEvidenceVersion: AUDIO_BASS_EVIDENCE_VERSION,
     evidenceClass: "inferred-from-audio",
     sampleRate: targetRate,
     sourceSampleRate: sourceRate,
@@ -225,7 +254,7 @@ export function analyzePcmChroma(samplesRaw, sampleRateRaw, options = {}) {
     overallChroma,
     frames: Object.freeze(frames),
     events,
-    note: "Pitch-class activity and time-local chroma are inferred from decoded audio; this is not a score transcription."
+    note: "Pitch classes use blended spectral and harmonic-salience evidence. Bass is emitted only when low-frequency evidence clears its ambiguity gate; this is not a score transcription."
   });
 }
 

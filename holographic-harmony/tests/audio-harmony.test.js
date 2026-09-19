@@ -54,6 +54,21 @@ test("brief chromatic disturbance does not manufacture a stable chord segment", 
   assert.equal(result.segments[0].symbol, "C");
 });
 
+test("audio harmonic segmentation consumes explicit low-frequency bass evidence without making it mandatory", () => {
+  const hop = 0.25;
+  const input = frames([{ pcs: [0, 4, 7], count: 8 }], hop).map((frame) => ({
+    ...frame,
+    pitchClasses: [0, 4, 7],
+    bassPc: 4,
+    bassConfidence: 0.8
+  }));
+  const result = inferAudioHarmonySegments(input, hop);
+  assert.equal(result.segments[0].bassPc, 4);
+  assert.match(result.segments[0].bassEvidence, /low-frequency/);
+  assert.ok(result.regions[0].bassPc === 4);
+  assert.match(result.bassEvidence, /when-confident/);
+});
+
 test("audio chord layer preserves ambiguity and does not invent bass evidence", () => {
   const hop = 0.25;
   const input = frames([{ pcs: [0, 4, 7], count: 8 }], hop);

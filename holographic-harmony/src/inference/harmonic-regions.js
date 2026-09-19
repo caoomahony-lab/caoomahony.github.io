@@ -1,6 +1,7 @@
 import { rankChordCandidates } from "../theory/chords.js";
+import { selectAdaptivePitchClasses } from "../music/audio-pitch-evidence.js";
 
-export const HARMONIC_REGION_VERSION = "harmonic-regions-v1";
+export const HARMONIC_REGION_VERSION = "harmonic-regions-v2";
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, Number(value) || 0));
@@ -105,16 +106,33 @@ function weightedChroma(segments) {
 }
 
 function activePitchClasses(chroma, options) {
-  const max = Math.max(...chroma, 1e-12);
-  const relativeFloor = Number(options.relativeFloor ?? 0.60);
-  const maxPitchClasses = Math.max(1, Number(options.maxPitchClasses ?? 4));
-  const ordered = chroma
-    .map((strength, pc) => ({ pc, strength }))
-    .sort((a, b) => b.strength - a.strength || a.pc - b.pc);
-  const selected = ordered
-    .filter((item, index) => index < maxPitchClasses && item.strength >= max * relativeFloor)
-    .map((item) => item.pc);
-  return Object.freeze([...new Set(selected)].sort((a, b) => a - b));
+  return selectAdaptivePitchClasses(chroma, options);
+}
+
+function aggregateRegionBass(segments, options) {
+  const votes = Array(12).fill(0);
+  let totalDuration = 0;
+  let evidenceDuration = 0;
+  for (const segment of segments) {
+    const duration = Math.max(0, Number(segment.duration) || Number(segment.end) - Number(segment.onset));
+    totalDuration += duration;
+    if (segment.bassPc == null) continue;
+    const confidence = Math.max(0.05, Number(segment.bassConfidence || 0));
+    votes[((Number(segment.bassPc) % 12) + 12) % 12] += duration * confidence;
+    evidenceDuration += duration;
+  }
+  const coverage = totalDuration > 0 ? evidenceDuration / totalDuration : 0;
+  const totalVote = votes.reduce((sum, value) => sum + value, 0);
+  const winner = votes.reduce((best, value, pc, array) => value > array[best] ? pc : best, 0);
+  const share = totalVote > 0 ? votes[winner] / totalVote : 0;
+  const minimumCoverage = Number(options.regionBassMinimumCoverage ?? 0.25);
+  const minimumShare = Number(options.regionBassMinimumShare ?? 0.55);
+  return Object.freeze({
+    bassPc: coverage >= minimumCoverage && share >= minimumShare ? winner : null,
+    confidence: coverage * share,
+    coverage,
+    share
+  });
 }
 
 function relativeWeights(values, temperature = 0.08) {
@@ -187,7 +205,9 @@ function makeRegion(group, index, options) {
   const end = Math.max(...segments.map((segment) => Number(segment.end)));
   const chroma = weightedChroma(segments);
   const observedPitchClasses = activePitchClasses(chroma, options);
+  const bass = aggregateRegionBass(segments, options);
   const candidatesRaw = rankChordCandidates(observedPitchClasses, {
+    bassPc: bass.bassPc,
     limit: Math.max(2, Number(options.candidateLimit ?? 5)),
     minSupport: Number(options.minChordSupport ?? 0.16)
   });
@@ -197,8 +217,9 @@ function makeRegion(group, index, options) {
     regionSupport: candidate.support,
     relativeWeight: weights[candidateIndex],
     evidenceClass: "inferred-from-audio",
-    bassPc: null,
-    bassEvidence: "unavailable-from-chroma-v1"
+    bassPc: bass.bassPc,
+    bassConfidence: bass.confidence,
+    bassEvidence: bass.bassPc == null ? "unavailable-or-ambiguous-low-frequency-audio" : "inferred-low-frequency-audio"
   })));
   const top = candidates[0] || null;
   const constituentMicroSegmentIndices = Object.freeze(segments.map((segment, sourceIndex) =>
@@ -221,8 +242,10 @@ function makeRegion(group, index, options) {
     ambiguity: candidates.length > 1
       ? clamp01(1 - (candidates[0].relativeWeight - candidates[1].relativeWeight))
       : 0,
-    bassPc: null,
-    bassEvidence: "unavailable-from-chroma-v1",
+    bassPc: bass.bassPc,
+    bassConfidence: bass.confidence,
+    bassCoverage: bass.coverage,
+    bassEvidence: bass.bassPc == null ? "unavailable-or-ambiguous-low-frequency-audio" : "inferred-low-frequency-audio",
     evidenceClass: "inferred-from-audio",
     provenance: Object.freeze({
       rule: segments.length === 1 ? "single-micro-segment" : "conservative-compatible-consolidation",
@@ -238,7 +261,7 @@ export function consolidateHarmonicRegions(segmentsRaw, options = {}) {
     return Object.freeze({
       regionVersion: HARMONIC_REGION_VERSION,
       evidenceClass: "inferred-from-audio",
-      bassEvidence: "unavailable-from-chroma-v1",
+      bassEvidence: "inferred-low-frequency-audio-when-confident",
       microSegmentCount: 0,
       regionCount: 0,
       microSegments: segments,
@@ -257,11 +280,11 @@ export function consolidateHarmonicRegions(segmentsRaw, options = {}) {
   return Object.freeze({
     regionVersion: HARMONIC_REGION_VERSION,
     evidenceClass: "inferred-from-audio",
-    bassEvidence: "unavailable-from-chroma-v1",
+    bassEvidence: "inferred-low-frequency-audio-when-confident",
     microSegmentCount: segments.length,
     regionCount: regions.length,
     microSegments: segments,
     regions,
-    note: "Regions conservatively consolidate compatible inferred micro-segments; relative weights are not calibrated probabilities."
+    note: "Regions conservatively consolidate compatible inferred micro-segments; bass is retained only when segment evidence is coherent. Relative weights are not calibrated probabilities."
   });
 }

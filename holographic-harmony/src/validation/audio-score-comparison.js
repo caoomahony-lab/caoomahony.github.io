@@ -1,4 +1,6 @@
-export const AUDIO_SCORE_COMPARISON_VERSION = "audio-score-comparison-v1";
+import { estimateConstrainedLocalAlignment } from "./local-timing-alignment.js";
+
+export const AUDIO_SCORE_COMPARISON_VERSION = "audio-score-comparison-v2";
 
 const EPSILON = 1e-9;
 
@@ -196,6 +198,14 @@ export function compareAudioToScore(audioRegionsRaw, scoreRegionsRaw, options = 
 
   const boundaryToleranceSeconds = Math.max(0, Number(options.boundaryToleranceSeconds ?? 0.5));
   const boundaries = boundaryMetrics(audioRegions, scoreRegions, best.offset, boundaryToleranceSeconds);
+  const localAlignment = estimateConstrainedLocalAlignment(audioRegions, scoreRegions, {
+    globalOffsetSeconds: best.offset,
+    windowSeconds: options.localWindowSeconds,
+    searchRadiusSeconds: options.localSearchRadiusSeconds,
+    offsetStepSeconds: options.localOffsetStepSeconds,
+    maxOffsetStepSeconds: options.localMaxOffsetStepSeconds,
+    transitionPenalty: options.localTransitionPenalty
+  });
   const inferredMicroSegmentCount = audioRegions.reduce(
     (sum, region) => sum + Math.max(1, Number(region.microSegmentCount) || 1),
     0
@@ -223,6 +233,7 @@ export function compareAudioToScore(audioRegionsRaw, scoreRegionsRaw, options = 
       timeWeightedChordTemplateAgreement: best.templateAgreement
     }),
     boundaries,
+    localAlignment,
     rootConfusions: confusionSummary(best.rootConfusions, ["scoreRootPc", "audioRootPc"]),
     qualityConfusions: confusionSummary(best.qualityConfusions, ["scoreTemplateId", "audioTemplateId"]),
     counts: Object.freeze({
@@ -234,8 +245,9 @@ export function compareAudioToScore(audioRegionsRaw, scoreRegionsRaw, options = 
       audio: "inferred-from-audio",
       scoreSonority: "measured-from-score",
       scoreChordInterpretation: "inferred-from-score-sonority",
-      alignment: "estimated"
+      alignment: "estimated",
+      localAlignment: "estimated-validation-only"
     }),
-    note: "Score note content is measured reference evidence; roots, chord qualities, functions, and the audio alignment remain analytical inferences."
+    note: "Score note content is measured reference evidence; roots, chord qualities, functions, and both global/local timing alignment remain analytical inferences. Local timing alignment is validation-only and never alters the audio analysis."
   });
 }

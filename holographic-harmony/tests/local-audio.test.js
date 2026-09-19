@@ -34,6 +34,8 @@ test("audio chroma inference identifies a synthetic A4 without claiming score tr
   const strongest = analysis.overallChroma.indexOf(Math.max(...analysis.overallChroma));
   assert.equal(strongest, 9);
   assert.equal(analysis.version, LOCAL_AUDIO_ANALYSIS_VERSION);
+  assert.equal(analysis.pitchEvidenceVersion, "audio-pitch-evidence-v2");
+  assert.equal(analysis.bassEvidenceVersion, "audio-bass-evidence-v1");
   assert.equal(analysis.evidenceClass, "inferred-from-audio");
   assert.match(analysis.note, /not a score transcription/i);
   assert.ok(analysis.events.some((event) => event.pitchClass === 9));
@@ -49,6 +51,15 @@ test("audio chroma inference retains the pitch classes of a synthetic C major tr
     .slice(0, 5)
     .map((entry) => entry.pc);
   for (const pc of [0, 4, 7]) assert.ok(top.includes(pc), `expected pitch class ${pc} in top chroma ${top}`);
+});
+
+test("audio pitch v2 emits explicit sparse pitch sets and confidence-gated bass evidence", () => {
+  const sampleRate = 11025;
+  const analysis = analyzePcmChroma(sine(sampleRate, 2.4, 130.812783), sampleRate, { windowSize: 4096 });
+  assert.ok(analysis.frames.every((frame) => Array.isArray(frame.pitchClasses)));
+  assert.ok(analysis.frames.every((frame) => frame.pitchClasses.length >= 1 && frame.pitchClasses.length <= 4));
+  assert.ok(analysis.frames.some((frame) => frame.bassPc === 0));
+  assert.ok(analysis.frames.every((frame) => frame.bassPc == null || (frame.bassConfidence >= 0.45 && frame.bassConfidence <= 1)));
 });
 
 test("browser app exposes a local Open music control and explicit privacy/evidence language", () => {

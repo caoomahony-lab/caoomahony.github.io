@@ -35,6 +35,8 @@ test("bounded offset search recovers a known audio-minus-score delay", () => {
   assert.equal(result.boundaries.precision, 1);
   assert.equal(result.boundaries.recall, 1);
   assert.equal(result.counts.microSegmentCount, 5);
+  assert.ok(result.localAlignment.knotCount >= 1);
+  assert.equal(result.evidenceClasses.localAlignment, "estimated-validation-only");
 });
 
 test("comparison reports root and quality confusions instead of hiding them in one score", () => {

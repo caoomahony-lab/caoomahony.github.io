@@ -217,6 +217,9 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       ["Boundary precision / recall", `${percent(comparison.boundaries.precision)} / ${percent(comparison.boundaries.recall)}`],
       ["Audio coverage", percent(comparison.coverage.audioCoverageShare)],
       ["Unresolved audio", seconds(comparison.coverage.unresolvedAudioSeconds)],
+      ["Local timing drift", comparison.localAlignment
+        ? `${seconds(comparison.localAlignment.minimumOffsetSeconds)} … ${seconds(comparison.localAlignment.maximumOffsetSeconds)} across ${comparison.localAlignment.knotCount} windows`
+        : "unavailable"],
       ["Timeline counts", `${comparison.counts.microSegmentCount} micro → ${comparison.counts.audioRegionCount} regions ↔ ${comparison.counts.scoreReferenceRegionCount} score references`]
     ];
 
@@ -239,7 +242,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.referenceResults.appendChild(create(
       "div",
       "audio-reference-note",
-      "Measured reference: score notes and lowest sounding MIDI. Inferred layers: score chord labels, audio regions, roots/functions, and time alignment. Relative weights are not probabilities."
+      "Measured reference: score notes and lowest sounding MIDI. Inferred layers: score chord labels, audio regions, roots/functions, and global/local time alignment. Local alignment is validation-only. Relative weights are not probabilities."
     ));
     this.referenceResults.hidden = false;
   }
