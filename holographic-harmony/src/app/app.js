@@ -350,7 +350,10 @@ export class HolographicHarmonyApp {
       this.duration = analysis.durationSeconds;
       this.playButton.disabled = false;
       this.status.textContent = "READY";
-      this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} chroma frames · inferred-from-audio evidence. Nothing was uploaded by Harmonic Savant.`;
+      this.clearScoreExport(
+        `Registered-note beta: ${analysis.registeredNoteEvents.length} inferred note events with octave/register across ${Math.round(analysis.registeredFrameShare * 100)}% of analysis frames. Audio → MusicXML remains disabled until rhythm/voice quantization is reliable.`
+      );
+      this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} frames · ${analysis.registeredNoteEvents.length} inferred registered-note events · inferred-from-audio evidence. Nothing was uploaded by Harmonic Savant.`;
       this.renderAt(0, true);
     } catch (error) {
       if (generation !== this.generation) return;
