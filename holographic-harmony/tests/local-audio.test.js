@@ -40,6 +40,7 @@ test("audio chroma inference identifies a synthetic A4 without claiming score tr
   assert.equal(analysis.version, LOCAL_AUDIO_ANALYSIS_VERSION);
   assert.equal(analysis.pitchEvidenceVersion, "audio-pitch-evidence-v2");
   assert.equal(analysis.bassEvidenceVersion, "audio-bass-evidence-v1");
+  assert.equal(analysis.registeredNoteVersion, "audio-registered-note-v1");
   assert.equal(analysis.evidenceClass, "inferred-from-audio");
   assert.match(analysis.note, /not a score transcription/i);
   assert.ok(analysis.events.some((event) => event.pitchClass === 9));
@@ -64,6 +65,34 @@ test("audio pitch v2 emits explicit sparse pitch sets and confidence-gated bass 
   assert.ok(analysis.frames.every((frame) => frame.pitchClasses.length >= 1 && frame.pitchClasses.length <= 4));
   assert.ok(analysis.frames.some((frame) => frame.bassPc === 0));
   assert.ok(analysis.frames.every((frame) => frame.bassPc == null || (frame.bassConfidence >= 0.45 && frame.bassConfidence <= 1)));
+});
+
+test("registered-note v1 resolves octave for a sustained synthetic tone", () => {
+  const sampleRate = 11025;
+  const a3 = analyzePcmChroma(sine(sampleRate, 2.4, 220), sampleRate, { windowSize: 4096 });
+  const a4 = analyzePcmChroma(sine(sampleRate, 2.4, 440), sampleRate, { windowSize: 4096 });
+
+  assert.equal(a3.registeredNoteVersion, "audio-registered-note-v1");
+  assert.equal(a4.registeredNoteVersion, "audio-registered-note-v1");
+  assert.ok(a3.registeredNoteEvents.some((event) => event.midi === 57), JSON.stringify(a3.registeredNoteEvents));
+  assert.ok(a4.registeredNoteEvents.some((event) => event.midi === 69), JSON.stringify(a4.registeredNoteEvents));
+  assert.ok(a3.registeredFrameShare > 0.5);
+  assert.ok(a4.registeredFrameShare > 0.5);
+});
+
+test("registered-note v1 keeps MIDI pitch consistent with detected pitch class", () => {
+  const sampleRate = 11025;
+  const analysis = analyzePcmChroma(
+    chord(sampleRate, 2.6, [130.812783, 329.627557, 391.995436]),
+    sampleRate,
+    { windowSize: 4096 }
+  );
+  assert.ok(analysis.registeredNoteEvents.length >= 2);
+  for (const event of analysis.registeredNoteEvents) {
+    assert.equal(((event.midi % 12) + 12) % 12, event.pitchClass);
+    assert.equal(Math.floor(event.midi / 12) - 1, event.octave);
+    assert.equal(event.evidenceClass, "inferred-registered-audio");
+  }
 });
 
 test("browser app exposes a local Open music control and explicit privacy/evidence language", () => {
