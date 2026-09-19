@@ -1,5 +1,6 @@
 import { parseMusicXML } from "../music/musicxml.js";
 import { analyzeLocalAudioFile, classifyLocalMusicFile } from "../music/local-audio.js";
+import { prepareLocalScoreFile } from "../music/score-io.js";
 import { complementField, fieldLabel, validatePartition } from "../theory/fields.js";
 import { computePitchClassActivity } from "../theory/activity.js";
 import { computeAdmissionHistory, compareAdmissionOrder } from "../theory/admissions.js";
@@ -9,7 +10,7 @@ import { PitchCircle } from "../visualization/pitch-circle.js";
 import { HolographicTimeline } from "../visualization/timeline.js";
 
 const LOCAL_TRACK_ID = "__local_music__";
-const LOCAL_FILE_ACCEPT = "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.musicxml,.xml";
+const LOCAL_FILE_ACCEPT = "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.musicxml,.xml,.mxl,.mid,.midi";
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return "0:00";
@@ -40,6 +41,7 @@ export class HolographicHarmonyApp {
     this.lastRenderTime = -1;
     this.localFile = null;
     this.localObjectUrl = null;
+    this.scoreExport = null;
     this.buildUI();
     this.bindEvents();
   }
@@ -79,7 +81,16 @@ export class HolographicHarmonyApp {
     sourceActions.append(this.openFileButton, this.fileInput, this.modeBadge);
     controls.append(selectorWrap, sourceActions);
 
-    this.sourceNote = create("div", "local-source-note", "Open a local audio or MusicXML file. The file is analyzed in this browser and is not uploaded by Harmonic Savant.");
+    this.sourceNote = create("div", "local-source-note", "Open local audio, MusicXML/XML, compressed MXL, or MIDI. Processing stays in this browser and is not uploaded by Harmonic Savant.");
+
+    this.converterPanel = create("section", "score-converter");
+    this.converterTitle = create("div", "score-converter-title", "BUILT-IN MUSICXML CONVERTER");
+    this.exportMusicXmlButton = create("button", "open-file-button score-export-button", "Export MusicXML");
+    this.exportMusicXmlButton.type = "button";
+    this.exportMusicXmlButton.disabled = true;
+    this.exportMusicXmlButton.setAttribute("aria-label", "Export or extract MusicXML from the loaded score file");
+    this.converterStatus = create("div", "score-converter-status", "Open .mxl, .mid/.midi, .musicxml, or .xml to enable local MusicXML export. Audio → MusicXML is intentionally unavailable until registered-note transcription is reliable.");
+    this.converterPanel.append(this.converterTitle, this.exportMusicXmlButton, this.converterStatus);
 
     const visualGrid = create("section", "visual-grid");
     const circleCard = create("div", "circle-card");
@@ -128,7 +139,7 @@ export class HolographicHarmonyApp {
     const footer = create("footer", "hhv-footer");
     footer.textContent = "Measured score facts, inferred audio features, exact set relations, and tonal interpretation are labeled separately.";
 
-    this.root.append(header, controls, this.sourceNote, visualGrid, transport, timelineCard, this.audio, footer);
+    this.root.append(header, controls, this.sourceNote, this.converterPanel, visualGrid, transport, timelineCard, this.audio, footer);
     this.timeline = new HolographicTimeline(this.timelineCanvas, (seconds) => this.seekTo(seconds));
   }
 
@@ -141,6 +152,7 @@ export class HolographicHarmonyApp {
       }
     });
     this.openFileButton.addEventListener("click", () => this.fileInput.click());
+    this.exportMusicXmlButton.addEventListener("click", () => this.downloadScoreExport());
     this.fileInput.addEventListener("change", async () => {
       const file = this.fileInput.files?.[0] || null;
       this.fileInput.value = "";
@@ -197,6 +209,40 @@ export class HolographicHarmonyApp {
     this.localObjectUrl = null;
   }
 
+  clearScoreExport(message = "Open .mxl, .mid/.midi, .musicxml, or .xml to enable local MusicXML export. Audio → MusicXML is intentionally unavailable until registered-note transcription is reliable.") {
+    this.scoreExport = null;
+    if (this.exportMusicXmlButton) {
+      this.exportMusicXmlButton.disabled = true;
+      this.exportMusicXmlButton.textContent = "Export MusicXML";
+    }
+    if (this.converterStatus) this.converterStatus.textContent = message;
+  }
+
+  setScoreExport(prepared) {
+    this.scoreExport = Object.freeze({
+      xml: prepared.exportXml,
+      filename: prepared.exportFilename,
+      semantics: prepared.exportSemantics
+    });
+    this.exportMusicXmlButton.disabled = false;
+    this.exportMusicXmlButton.textContent = prepared.exportLabel || "Export MusicXML";
+    this.converterStatus.textContent = `${prepared.note} Export: ${prepared.exportSemantics}.`;
+  }
+
+  downloadScoreExport() {
+    if (!this.scoreExport?.xml) return;
+    const blob = new Blob([this.scoreExport.xml], { type: "application/vnd.recordare.musicxml+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = this.scoreExport.filename || "harmonic-savant.musicxml";
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   beginLoad(status = "LOADING") {
     const generation = ++this.generation;
     this.stopAnimation();
@@ -210,6 +256,7 @@ export class HolographicHarmonyApp {
     this.shadowField = [];
     this.duration = 0;
     this.playButton.disabled = false;
+    this.clearScoreExport();
     this.resetDiagnostics();
     return generation;
   }
@@ -261,8 +308,8 @@ export class HolographicHarmonyApp {
     const kind = classifyLocalMusicFile(file);
     this.ensureLocalOption(file.name || "untitled");
     if (kind === "audio") return this.loadLocalAudio(file);
-    if (kind === "musicxml") return this.loadLocalMusicXML(file);
-    const error = new Error("Unsupported local file. Choose a browser-decodable audio file, .musicxml, or .xml file.");
+    if (kind === "musicxml" || kind === "mxl" || kind === "midi") return this.loadLocalScore(file);
+    const error = new Error("Unsupported local file. Choose browser-decodable audio, .musicxml/.xml, .mxl, .mid, or .midi.");
     this.status.textContent = "ERROR";
     this.fieldEl.textContent = error.message;
     this.sourceNote.textContent = error.message;
@@ -315,18 +362,22 @@ export class HolographicHarmonyApp {
   }
 
   async loadLocalMusicXML(file) {
-    const generation = this.beginLoad("PARSING SCORE");
+    return this.loadLocalScore(file);
+  }
+
+  async loadLocalScore(file) {
+    const generation = this.beginLoad("CONVERTING SCORE");
     this.releaseLocalObjectUrl();
     this.ensureLocalOption(file.name || "local score");
-    this.modeBadge.textContent = "LOCAL SCORE · MEASURED";
-    this.sourceNote.textContent = `Parsing ${file.name} locally.`;
+    this.sourceNote.textContent = `Reading ${file.name} locally.`;
 
     try {
-      const xml = await file.text();
+      const prepared = await prepareLocalScoreFile(file, globalThis.DOMParser, {
+        trackId: `local:${file.name}`
+      });
       if (generation !== this.generation) return;
-      const parsed = parseMusicXML(xml, globalThis.DOMParser, { trackId: `local:${file.name}` });
-      if (generation !== this.generation) return;
-      this.notes = parsed.notes;
+      const parsed = prepared.parsed;
+      this.notes = [...parsed.notes];
       const initialActivity = computePitchClassActivity(this.notes, Math.min(8, parsed.durationSeconds));
       this.activeField = inferScaleCandidates(initialActivity.raw, 1)[0]?.pcs || [0, 2, 4, 5, 7, 9, 11];
       this.shadowField = complementField(this.activeField);
@@ -340,19 +391,31 @@ export class HolographicHarmonyApp {
         audioOffset: 0,
         durationHint: parsed.durationSeconds,
         local: true,
-        evidenceClass: "measured-from-score",
+        evidenceClass: prepared.evidenceClass,
+        scoreSourceFormat: prepared.sourceFormat,
+        exportSemantics: prepared.exportSemantics,
         analysis: Object.freeze({ mode: "adaptive" })
       });
+      this.setScoreExport(prepared);
+      this.modeBadge.textContent = prepared.sourceFormat === "midi"
+        ? "LOCAL MIDI · ENCODED"
+        : prepared.sourceFormat === "mxl"
+          ? "LOCAL MXL · EXTRACTED"
+          : "LOCAL SCORE · MEASURED";
       this.audio.removeAttribute("src");
       this.audio.load();
       this.duration = parsed.durationSeconds;
       this.playButton.disabled = true;
       this.status.textContent = "READY";
-      this.sourceNote.textContent = `${file.name} · ${parsed.notes.length} score notes parsed locally. Score facts are measured; tonal context remains interpretive. Playback requires an audio file.`;
+      const evidenceText = prepared.sourceFormat === "midi"
+        ? "MIDI pitch/timing/velocity are encoded event data; notation and tonal context are generated/interpreted."
+        : "Score note content is measured from MusicXML; tonal context remains interpretive.";
+      this.sourceNote.textContent = `${file.name} · ${parsed.notes.length} note events processed locally · ${prepared.sourceFormat.toUpperCase()} → MusicXML ready. ${evidenceText} Playback requires audio.`;
       this.renderAt(0, true);
     } catch (error) {
       if (generation !== this.generation) return;
       console.error(error);
+      this.clearScoreExport(error.message);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
       this.sourceNote.textContent = error.message;
