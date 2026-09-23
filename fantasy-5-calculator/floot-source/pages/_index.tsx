@@ -201,12 +201,24 @@ export default function Home() {
           {batchResult && (
             <>
               <BatchCoveragePlot result={batchResult} />
+              {batchResult.mode === "population" && (
+                <div className={styles.enrichmentBanner}>
+                  <b>HIGH ENRICHMENT ZONE</b>
+                  <span>top {batchResult.highClassCount} / {batchResult.occupiedClasses} D×G classes</span>
+                  <span>{(100*batchResult.quickPickRate).toFixed(2)}% of legal sets</span>
+                  <span>{batchResult.enrichmentRatio.toFixed(2)}× enrichment</span>
+                </div>
+              )}
               <div className={styles.statGrid}>
                 {batchResult.mode === "population" ? <>
-                  <Summary label="RMS DISPLACEMENT" value={batchResult.rmsDistance.toFixed(4)} />
-                  <Summary label="TOTAL DISTANCE" value={batchResult.totalDistance.toFixed(4)} />
+                  <Summary label="POPULATION RMS" value={batchResult.rmsDistance.toFixed(4)} />
+                  <Summary label="EQUAL-SPACE RMS" value={batchResult.uniformRmsDistance.toFixed(4)} />
+                  <Summary label="IN HIGH ZONE" value={`${batchResult.ticketHighCount} / ${batchResult.count}`} />
+                  <Summary label="YOUR HIGH-ZONE RATE" value={`${(100*batchResult.ticketHighRate).toFixed(1)}%`} />
+                  <Summary label="QUICK-PICK EXPECTED" value={`${(100*batchResult.quickPickRate).toFixed(2)}%`} />
+                  <Summary label="EXPECTED IN THIS BATCH" value={batchResult.expectedHighCount.toFixed(1)} />
+                  <Summary label="CLOSER BASELINE" value={batchResult.rmsDistance <= batchResult.uniformRmsDistance ? "Population" : "Equal-space"} />
                   <Summary label="EXACT POPULATION" value={batchResult.totalWeight.toLocaleString()} />
-                  <Summary label="BATCH SIZE" value={String(batchResult.count)} />
                 </> : <>
                   <Summary label="YOUR COVERAGE RADIUS" value={batchResult.actualRadius.toFixed(4)} />
                   <Summary label="BEST-FOUND RADIUS" value={batchResult.referenceRadius.toFixed(4)} />
@@ -216,7 +228,7 @@ export default function Home() {
               </div>
               <p className={styles.derivedNote}>
                 {batchResult.mode === "population"
-                  ? "Gold dots are a deterministic population-weighted centroid reference seeded at the D–G population peak. Lines use minimum-total-distance one-to-one matching. RMS displacement is the primary error; the percentage is a bounded display score."
+                  ? "Gold X marks are the population-weighted baseline; pale diamonds are the equally spaced baseline. The gold cell haze marks the high-enrichment classes. A true Quick Pick is uniform over legal tickets, so its exact expected high-zone rate equals the zone’s share of legal sets."
                   : "100% means the batch matches the best distribution found by the calculator at this batch size. This is a geometric coverage score, not a prediction of winning probability."}
               </p>
             </>
@@ -360,14 +372,16 @@ function BatchCoveragePlot({ result }: { result: ReturnType<typeof batchCoverage
   const sampleStep=Math.max(1, Math.ceil(result.space.length/3500));
   const space=result.space.filter((_,index)=>index%sampleStep===0);
   const xy=(point:{d:number;g:number})=>({x:x0+point.d*width,y:y0+(1-point.g)*height});
-  const peak=xy(result.peak);
+  const peak=xy(result.peak), cellW=width*result.dStep*.9, cellH=height*result.gStep*.9;
   return (
     <div className={styles.coveragePlotCard}>
-      <div className={styles.plotTitle}><b>{result.mode==="population"?"Tickets vs population-weighted baseline":"Your batch vs best-found distribution"}</b><span>D–G SPACE</span></div>
+      <div className={styles.plotTitle}><b>{result.mode==="population"?"Population vs equal-space baselines":"Your batch vs best-found distribution"}</b><span>D–G SPACE</span></div>
       <svg viewBox="0 0 600 350" className={styles.coveragePlot} role="img" aria-label="Batch distribution across D and G space">
         <rect x={x0} y={y0} width={width} height={height} className={styles.mapBackground} />
         {[0,.25,.5,.75,1].map(t=><g key={t}><line x1={x0+t*width} y1={y0} x2={x0+t*width} y2={y0+height} className={styles.coverageGrid}/><line x1={x0} y1={y0+t*height} x2={x0+width} y2={y0+t*height} className={styles.coverageGrid}/><text x={x0+t*width} y="331" textAnchor="middle" className={styles.axisLabel}>{(1+t*(result.dMax-1)).toFixed(1)}</text><text x="38" y={y0+(1-t)*height+3} textAnchor="end" className={styles.axisLabel}>{(t*result.gMax).toFixed(2)}</text></g>)}
+        {result.mode==="population"&&result.highZone.map((cell,index)=>{const p=xy(cell);return <rect key={`hz${index}`} x={p.x-cellW/2} y={p.y-cellH/2} width={cellW} height={cellH} rx="1" className={styles.highZoneCell}/>;})}
         {space.map((point,index)=>{const p=xy(point),opacity=result.mode==="population"?0.08+0.72*Math.sqrt(point.weight/result.peak.weight):0.18;return <circle key={index} cx={p.x} cy={p.y} r={result.mode==="population"?1.35:1} className={styles.coverageSpacePoint} style={{opacity}}/>;})}
+        {result.mode==="population"&&result.uniformReference.map((point,index)=>{const p=xy(point);return <rect key={`u${index}`} x={p.x-3.3} y={p.y-3.3} width="6.6" height="6.6" transform={`rotate(45 ${p.x} ${p.y})`} className={styles.uniformMark}/>;})}
         {result.mode==="population"&&result.assignment.map(([ri,ai],index)=>{const a=xy(result.reference[ri]),b=xy(result.actual[ai]);return <line key={`m${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={styles.matchLine}/>;})}
         {result.reference.map((point,index)=>{const p=xy(point);return <g key={`r${index}`}><line x1={p.x-5} y1={p.y-5} x2={p.x+5} y2={p.y+5} className={styles.referenceMark}/><line x1={p.x-5} y1={p.y+5} x2={p.x+5} y2={p.y-5} className={styles.referenceMark}/></g>;})}
         {result.actual.map((point,index)=>{const p=xy(point);return <g key={`a${index}`}><circle cx={p.x} cy={p.y} r="5" className={styles.batchPoint}/><text x={p.x+7} y={p.y-6} className={styles.pointLabel}>{index+1}</text></g>;})}
@@ -375,7 +389,11 @@ function BatchCoveragePlot({ result }: { result: ReturnType<typeof batchCoverage
         <text x="285" y="348" className={styles.axisLabel}>D</text>
         <text x="13" y="190" transform="rotate(-90 13 190)" className={styles.axisLabel}>G</text>
       </svg>
-      <div className={styles.plotLegend}><span><i className={styles.legendActual}/>your tickets</span><span><i className={styles.legendReference}/>{result.mode==="population"?"population baseline":"best-found reference"}</span>{result.mode==="population"&&<span>background opacity = exact set density</span>}</div>
+      <div className={styles.plotLegend}>
+        <span><i className={styles.legendActual}/>your tickets</span>
+        <span><i className={styles.legendReference}/>{result.mode==="population"?"population baseline":"best-found reference"}</span>
+        {result.mode==="population"&&<><span><i className={styles.legendUniform}/>equal-space baseline</span><span><i className={styles.legendZone}/>high enrichment zone</span></>}
+      </div>
     </div>
   );
 }
