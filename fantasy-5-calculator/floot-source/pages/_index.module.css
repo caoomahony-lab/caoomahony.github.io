@@ -9,3 +9,40 @@
 .metricTable{border:1px solid #203744;border-radius:8px;overflow:hidden}.metricRow{display:grid;grid-template-columns:52px 1fr;gap:20px;padding:16px;border-bottom:1px solid #203744}.metricRow:last-child{border-bottom:0}.metricRow>b{color:#7bdff2;font-size:1.12rem}.metricRow strong{display:block;font-size:1rem;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.metricRow span{display:block;color:#8ca4af;font-size:.78rem;margin-top:7px}.formulas{overflow:auto;background:#08131b;border:1px solid #203442;border-radius:8px;padding:20px;color:#cfdee4;font:clamp(.72rem,1.6vw,.92rem)/1.75 var(--font-family-monospace);white-space:pre;max-width:100%}.footer{color:#6f8792;font-size:.78rem;line-height:1.6;padding:8px 10px 0}
 @media(max-width:900px){.coverageTop{grid-template-columns:1fr}.coverageNumber{text-align:left;width:100%}.batchControls{grid-template-columns:1fr}.batchGameField,.batchTicketField{grid-column:1/-1}.controls{grid-template-columns:1fr 1fr}.numberField{grid-column:1/-1}.summary,.statGrid{grid-template-columns:repeat(2,1fr)}.twoColumn{grid-template-columns:1fr}.twoColumn>.panel{margin-top:0}.summaryWide{grid-column:1/-1}}
 @media(max-width:560px){.page{padding:10px 8px 55px}.hero{padding:18px 5px 12px}.hero h1{font-size:2.65rem}.hero p{font-size:.98rem}.panel{padding:16px 13px;border-radius:11px}.coverageNumber strong{font-size:4rem}.coveragePlotCard{padding:9px}.controls{gap:8px}.inputs{gap:5px}.inputs input{height:48px;padding:5px;font-size:1rem}.controls button{height:48px;font-size:.78rem}.summary,.statGrid{gap:7px}.summaryCard{padding:11px}.summaryCard strong{font-size:.92rem}.sectionHead{align-items:start;flex-direction:column;gap:7px}.sectionHead h2{font-size:2rem}.plotCard{padding:9px}.metricRow{grid-template-columns:38px 1fr;gap:12px;padding:14px 10px}.formulas{padding:13px;font-size:.68rem}.structureBadge{width:100%;justify-content:space-between}}
+
+/* The scientific coordinates and assignments stay unchanged; these rules control only their display. */
+.coveragePlotCard{overflow:hidden}
+.coverageTick{fill:#a5bac5;font:11px var(--font-family-monospace);font-variant-numeric:tabular-nums}
+.coverageAxisTitle{fill:#b5cbd4;font:600 12px var(--font-family-monospace)}
+.highZoneCell{fill-opacity:.07;stroke-opacity:.12;stroke-width:.45}
+.matchLine{stroke-width:.8;stroke-dasharray:2 5;opacity:.13}
+.selectedMatchLine{stroke:#e9c76c;stroke-width:1.4;stroke-dasharray:3 3;opacity:.72}
+.referenceMark{stroke-width:1.5;opacity:.77}
+.uniformMark{stroke-width:1.1;opacity:.65}
+.ticketTarget{cursor:pointer;outline:none}
+.ticketHit{fill:transparent;pointer-events:all}
+.batchPoint{fill:#72e9ff;stroke:#07151f;stroke-width:1.6}
+.ticketNumber{fill:#07151f;font:700 9.7px var(--font-family-monospace);pointer-events:none}
+.ticketSelected{fill:none;stroke:#f3f7f9;stroke-width:1.5}
+.ticketTarget:focus-visible .batchPoint{stroke:#fff;stroke-width:2.4}
+.selectedReference{fill:none;stroke:#fff1bb;stroke-width:1;opacity:.8}
+.peakAnnotation{pointer-events:none}
+.peakLeader{stroke:#e9c76c;stroke-width:.8;opacity:.75}
+.peakBadge{fill:#213039;stroke:#e9c76c;stroke-width:.75}
+.peakLabel{fill:#fff0c1;stroke:none;font:700 9px var(--font-family-monospace);letter-spacing:.06em}
+.plotLegend{gap:8px 18px;line-height:1.4}
+.plotLegend span{white-space:nowrap}
+.plotLegend span:last-child{text-transform:none}
+.plotSelection{min-height:24px;margin-top:9px;padding-top:8px;border-top:1px solid #1d3442;color:#9db4bf;font-size:.74rem;line-height:1.45}
+.plotSelection b{color:#7bdff2}
+@media(max-width:560px){
+  .coveragePlotCard{padding:8px}
+  .plotTitle{flex-wrap:wrap}
+  .plotTitle b{font-size:.78rem}
+  .plotLegend{gap:7px 12px;font-size:.68rem}
+  .plotLegend span{white-space:normal}
+  .coverageTick{font-size:11px}
+  .coverageAxisTitle{font-size:13px}
+  .enrichmentBanner{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;font-size:.68rem}
+  .enrichmentBanner b{grid-column:1/-1}
+}
