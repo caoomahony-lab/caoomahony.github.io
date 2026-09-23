@@ -1,7 +1,8 @@
 import { GAME_CONFIGS, LotteryGame, stateSpaceGeometry } from "./stateSpaceGeometry";
 
 type Point = { d:number; g:number };
-type WeightedPoint = Point & { weight:number };
+type WeightedPoint = Point & { weight:number; di:number };
+type EnrichmentCell = { di:number; gi:number; d:number; g:number; population:number };
 export type CoverageMode = "uniform" | "population";
 
 const cache = new Map<LotteryGame, { points:WeightedPoint[]; gMax:number; totalWeight:number; peak:WeightedPoint }>();
@@ -10,7 +11,7 @@ function theoreticalSpace(game:LotteryGame) {
   const cached=cache.get(game);
   if(cached) return cached;
   const max=GAME_CONFIGS[game].max, dMax=(max-1)/4;
-  const raw:Array<{d:number;g:number;weight:number}>=[];
+  const raw:Array<{d:number;g:number;weight:number;di:number}>=[];
   let gMax=0;
   for(let R=4;R<=max-1;R++) {
     const D=R/4, counts=new Map<string,{g:number;count:number}>();
@@ -21,9 +22,9 @@ function theoreticalSpace(game:LotteryGame) {
       counts.set(key,{g:G,count:(old?.count||0)+1});
       if(G>gMax) gMax=G;
     }
-    for(const {g,count} of counts.values()) raw.push({d:D,g,weight:count*(max-R)});
+    for(const {g,count} of counts.values()) raw.push({d:D,g,weight:count*(max-R),di:R-4});
   }
-  const points=raw.map(p=>({d:(p.d-1)/(dMax-1),g:p.g/gMax,weight:p.weight}));
+  const points=raw.map(p=>({d:(p.d-1)/(dMax-1),g:p.g/gMax,weight:p.weight,di:p.di}));
   const totalWeight=points.reduce((s,p)=>s+p.weight,0);
   const peak=points.reduce((best,p)=>p.weight>best.weight?p:best,points[0]);
   const result={points,gMax,totalWeight,peak};
@@ -54,7 +55,7 @@ function farthestFirst(space:Point[],start:number,count:number) {
   return {points:indices.map(i=>space[i]),radius:Math.max(...nearest)};
 }
 
-function bestFoundReference(space:Point[],count:number,actual:Point[]) {
+function bestFoundReference(space:Point[],count:number) {
   const centroid=space.reduce((s,p)=>({d:s.d+p.d,g:s.g+p.g}),{d:0,g:0});
   centroid.d/=space.length; centroid.g/=space.length;
   const nearestIndex=(target:Point)=>{
@@ -71,8 +72,7 @@ function bestFoundReference(space:Point[],count:number,actual:Point[]) {
     const candidate=farthestFirst(space,start,count);
     if(!best||candidate.radius<best.radius) best=candidate;
   }
-  const actualRadius=radius(space,actual);
-  return !best||actualRadius<best.radius?{points:actual,radius:actualRadius}:best;
+  return best!;
 }
 
 function populationReference(space:WeightedPoint[],count:number,peak:WeightedPoint):Point[] {
@@ -123,6 +123,38 @@ function optimalAssignment(reference:Point[],actual:Point[]) {
   return pairs;
 }
 
+function assignmentStats(reference:Point[],actual:Point[]) {
+  const assignment=optimalAssignment(reference,actual);
+  const distances=assignment.map(([r,a])=>distance(reference[r],actual[a]));
+  const total=distances.reduce((s,d)=>s+d,0);
+  return {assignment,total,rms:Math.sqrt(distances.reduce((s,d)=>s+d*d,0)/distances.length)};
+}
+
+function enrichment(space:WeightedPoint[],max:number,totalWeight:number) {
+  const bins=new Map<string,{di:number;gi:number;population:number}>();
+  for(const point of space) {
+    const gi=Math.min(37,Math.floor(point.g*38)),key=`${point.di}:${gi}`;
+    const old=bins.get(key);
+    bins.set(key,{di:point.di,gi,population:(old?.population||0)+point.weight});
+  }
+  const occupied=[...bins.values()].sort((a,b)=>a.population-b.population);
+  const peakPopulation=occupied[occupied.length-1].population;
+  let lowPopulation=0,lowClassCount=0;
+  for(const cell of occupied) {
+    if(lowPopulation+cell.population>peakPopulation) break;
+    lowPopulation+=cell.population;lowClassCount++;
+  }
+  const highRaw=[...occupied].sort((a,b)=>b.population-a.population).slice(0,lowClassCount);
+  const highPopulation=highRaw.reduce((s,c)=>s+c.population,0);
+  const highZone:EnrichmentCell[]=highRaw.map(c=>({
+    ...c,d:c.di/(max-5),g:(c.gi+.5)/38,
+  }));
+  const populationShare=highPopulation/totalWeight,classShare=lowClassCount/occupied.length;
+  return {highZone,highKeys:new Set(highRaw.map(c=>`${c.di}:${c.gi}`)),occupiedClasses:occupied.length,
+    highClassCount:lowClassCount,peakPopulation,lowPopulation,highPopulation,populationShare,classShare,
+    enrichmentRatio:populationShare/classShare,dStep:1/(max-5),gStep:1/38};
+}
+
 export const batchCoverage = {
   parse(text:string,game:LotteryGame):number[][] {
     const max=GAME_CONFIGS[game].max, lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
@@ -137,18 +169,26 @@ export const batchCoverage = {
   analyze(tickets:number[][],game:LotteryGame,mode:CoverageMode="uniform") {
     if(tickets.length<2) throw new Error("Enter at least two tickets.");
     const {points:space,gMax,totalWeight,peak}=theoreticalSpace(game);
-    const max=GAME_CONFIGS[game].max,dMax=(max-1)/4;
-    const actual=tickets.map(ticket=>{const m=stateSpaceGeometry.compute(ticket,game);return {d:(m.D-1)/(dMax-1),g:m.G/gMax};});
+    const max=GAME_CONFIGS[game].max,dMax=(max-1)/4,zone=enrichment(space,max,totalWeight);
+    const metrics=tickets.map(ticket=>stateSpaceGeometry.compute(ticket,game));
+    const actual=metrics.map(m=>({d:(m.D-1)/(dMax-1),g:m.G/gMax}));
+    const ticketHighCount=metrics.filter(m=>zone.highKeys.has(`${m.R-4}:${Math.min(37,Math.floor((m.G/gMax)*38))}`)).length;
+    const common={count:tickets.length,actual,space,peak,totalWeight,dMax,gMax,highZone:zone.highZone,dStep:zone.dStep,gStep:zone.gStep,
+      occupiedClasses:zone.occupiedClasses,highClassCount:zone.highClassCount,highPopulation:zone.highPopulation,
+      quickPickRate:zone.populationShare,enrichmentRatio:zone.enrichmentRatio,ticketHighCount,ticketHighRate:ticketHighCount/tickets.length,
+      expectedHighCount:tickets.length*zone.populationShare};
     if(mode==="population") {
-      const reference=populationReference(space,tickets.length,peak),assignment=optimalAssignment(reference,actual);
-      const distances=assignment.map(([r,a])=>distance(reference[r],actual[a]));
-      const totalDistance=distances.reduce((s,d)=>s+d,0),rmsDistance=Math.sqrt(distances.reduce((s,d)=>s+d*d,0)/distances.length);
-      return {mode,count:tickets.length,coverage:100*Math.max(0,1-rmsDistance/Math.SQRT2),actualRadius:radius(space,actual),referenceRadius:0,
-        excessRadius:0,totalDistance,rmsDistance,assignment,actual,reference,space,peak,totalWeight,dMax,gMax};
+      const reference=populationReference(space,tickets.length,peak),weighted=assignmentStats(reference,actual);
+      const uniform=bestFoundReference(space,tickets.length),uniformStats=assignmentStats(uniform.points,actual);
+      return {mode,coverage:100*Math.max(0,1-weighted.rms/Math.SQRT2),actualRadius:radius(space,actual),referenceRadius:0,excessRadius:0,
+        totalDistance:weighted.total,rmsDistance:weighted.rms,assignment:weighted.assignment,reference,uniformReference:uniform.points,
+        uniformRmsDistance:uniformStats.rms,uniformAssignment:uniformStats.assignment,...common};
     }
-    const actualRadius=radius(space,actual),reference=bestFoundReference(space,tickets.length,actual);
-    return {mode,count:tickets.length,coverage:actualRadius===0?100:Math.min(100,100*reference.radius/actualRadius),actualRadius,
+    const actualRadius=radius(space,actual),best=bestFoundReference(space,tickets.length);
+    const reference=actualRadius<best.radius?{points:actual,radius:actualRadius}:best;
+    return {mode,coverage:actualRadius===0?100:Math.min(100,100*reference.radius/actualRadius),actualRadius,
       referenceRadius:reference.radius,excessRadius:Math.max(0,actualRadius-reference.radius),totalDistance:0,rmsDistance:0,
-      assignment:[] as Array<[number,number]>,actual,reference:reference.points,space,peak,totalWeight,dMax,gMax};
+      assignment:[] as Array<[number,number]>,reference:reference.points,uniformReference:best.points,uniformRmsDistance:0,
+      uniformAssignment:[] as Array<[number,number]>,...common};
   }
 };
