@@ -2,17 +2,18 @@
   "schemaVersion": 1,
   "project": "Lottery Geometry Calculator",
   "flootProjectId": "6b90f228-9b81-4511-9e6b-1c2f94e83ac9",
-  "flootProjectVersion": 1789009531390,
-  "flootCheckpointId": "aae1c03e-6226-4c32-b5df-3793c38b6cab",
+  "flootProjectVersion": 1790123901472,
+  "flootCheckpointId": "4b59dd20-17f5-40b0-9a34-2964e4c815e2",
   "publishedUrl": "https://fantasy5-geometry.floot.app",
-  "exportedAt": "2026-09-10T03:15:00Z",
+  "exportedAt": "2026-09-23T00:39:04Z",
   "verification": {
     "flootTypecheck": "clean",
     "flootSpecs": {
-      "filesPassed": 3,
+      "filesPassed": 4,
       "filesFailed": 0
     },
     "browserAcceptance": [
+      "D-space coverage appears before the distribution plot and single-ticket detail",
       "Fantasy 5 exact D×G reference",
       "Powerball canonical example",
       "Mega Millions legal random range",
@@ -34,6 +35,8 @@
     "floot-source/components/Button.module.css",
     "floot-source/components/Select.tsx",
     "floot-source/components/Select.module.css",
-    "floot-source/base.css"
+    "floot-source/base.css",
+    "floot-source/helpers/batchCoverage.tsx",
+    "floot-source/helpers/batchCoverage.spec.tsx"
   ]
 }
