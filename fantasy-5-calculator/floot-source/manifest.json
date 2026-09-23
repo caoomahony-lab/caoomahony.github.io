@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "project": "Lottery Geometry Calculator",
   "flootProjectId": "6b90f228-9b81-4511-9e6b-1c2f94e83ac9",
-  "flootProjectVersion": 1790123901472,
-  "flootCheckpointId": "4b59dd20-17f5-40b0-9a34-2964e4c815e2",
+  "flootProjectVersion": 1790137312844,
+  "flootCheckpointId": "66f57932-9417-4378-9926-913257181900",
   "publishedUrl": "https://fantasy5-geometry.floot.app",
-  "exportedAt": "2026-09-23T00:39:04Z",
+  "exportedAt": "2026-09-23T04:15:00Z",
   "verification": {
     "flootTypecheck": "clean",
     "flootSpecs": {
@@ -19,7 +19,12 @@
       "Mega Millions legal random range",
       "fail-closed duplicate validation",
       "production-origin console clean"
-    ]
+    ],
+    "populationWeightedUniverses": {
+      "fantasy5": 850668,
+      "powerball": 11238513,
+      "megaMillions": 12103014
+    }
   },
   "files": [
     "floot-source/pages/_index.tsx",

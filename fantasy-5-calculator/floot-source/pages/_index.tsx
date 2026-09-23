@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Button } from "../components/Button";
 import { Input } from "../components/Input";
 import { Textarea } from "../components/Textarea";
+import { Switch } from "../components/Switch";
 import {
   Select,
   SelectContent,
@@ -10,7 +11,7 @@ import {
   SelectValue,
 } from "../components/Select";
 import { fantasy5Geometry } from "../helpers/fantasy5Geometry";
-import { batchCoverage } from "../helpers/batchCoverage";
+import { batchCoverage, CoverageMode } from "../helpers/batchCoverage";
 import {
   GAME_CONFIGS,
   LotteryGame,
@@ -47,6 +48,7 @@ export default function Home() {
   const [batchText, setBatchText] = useState("");
   const [batchError, setBatchError] = useState("");
   const [batchResult, setBatchResult] = useState<ReturnType<typeof batchCoverage.analyze> | null>(null);
+  const [coverageMode, setCoverageMode] = useState<CoverageMode>("uniform");
 
   const config = GAME_CONFIGS[game];
   const metrics = useMemo(
@@ -116,11 +118,23 @@ export default function Home() {
   const calculateBatch = () => {
     try {
       const tickets = batchCoverage.parse(batchText, game);
-      setBatchResult(batchCoverage.analyze(tickets, game));
+      setBatchResult(batchCoverage.analyze(tickets, game, coverageMode));
       setBatchError("");
     } catch (cause) {
       setBatchResult(null);
       setBatchError(cause instanceof Error ? cause.message : "Invalid batch.");
+    }
+  };
+
+  const changeCoverageMode = (population: boolean) => {
+    const next: CoverageMode = population ? "population" : "uniform";
+    setCoverageMode(next);
+    try {
+      const tickets = batchCoverage.parse(batchText, game);
+      setBatchResult(batchCoverage.analyze(tickets, game, next));
+      setBatchError("");
+    } catch {
+      setBatchResult(null);
     }
   };
 
@@ -146,14 +160,19 @@ export default function Home() {
           <div className={styles.coverageTop}>
             <div>
               <div className={styles.eyebrow}>BATCH DISTRIBUTION</div>
-              <h2>D-space coverage</h2>
-              <p>How evenly this ticket batch covers the realizable D–G space compared with the best distribution found for the same number of tickets.</p>
+              <h2>{coverageMode === "population" ? "Population-weighted D-space" : "D-space coverage"}</h2>
+              <p>{coverageMode === "population" ? "Match your tickets to an N-point baseline fitted to the exact D–G population density." : "How evenly this ticket batch covers the realizable D–G space compared with the best distribution found for the same number of tickets."}</p>
             </div>
             <div className={styles.coverageNumber}>
-              <span>COVERAGE</span>
+              <span>{coverageMode === "population" ? "POPULATION MATCH" : "COVERAGE"}</span>
               <strong>{batchResult ? `${batchResult.coverage.toFixed(1)}%` : "—"}</strong>
               <small>{batchResult ? `${batchResult.count} tickets` : "Add 2+ tickets"}</small>
             </div>
+          </div>
+          <div className={styles.modeBar}>
+            <span className={coverageMode === "uniform" ? styles.modeActive : ""}>Uniform geometry</span>
+            <Switch checked={coverageMode === "population"} onCheckedChange={changeCoverageMode} aria-label="Toggle population-weighted baseline" />
+            <span className={coverageMode === "population" ? styles.modeActive : ""}>Population weighted</span>
           </div>
           <div className={styles.batchControls}>
             <label className={styles.batchGameField}>
@@ -183,13 +202,22 @@ export default function Home() {
             <>
               <BatchCoveragePlot result={batchResult} />
               <div className={styles.statGrid}>
-                <Summary label="YOUR COVERAGE RADIUS" value={batchResult.actualRadius.toFixed(4)} />
-                <Summary label="BEST-FOUND RADIUS" value={batchResult.referenceRadius.toFixed(4)} />
-                <Summary label="EXCESS DISTANCE" value={batchResult.excessRadius.toFixed(4)} />
-                <Summary label="BATCH SIZE" value={String(batchResult.count)} />
+                {batchResult.mode === "population" ? <>
+                  <Summary label="RMS DISPLACEMENT" value={batchResult.rmsDistance.toFixed(4)} />
+                  <Summary label="TOTAL DISTANCE" value={batchResult.totalDistance.toFixed(4)} />
+                  <Summary label="EXACT POPULATION" value={batchResult.totalWeight.toLocaleString()} />
+                  <Summary label="BATCH SIZE" value={String(batchResult.count)} />
+                </> : <>
+                  <Summary label="YOUR COVERAGE RADIUS" value={batchResult.actualRadius.toFixed(4)} />
+                  <Summary label="BEST-FOUND RADIUS" value={batchResult.referenceRadius.toFixed(4)} />
+                  <Summary label="EXCESS DISTANCE" value={batchResult.excessRadius.toFixed(4)} />
+                  <Summary label="BATCH SIZE" value={String(batchResult.count)} />
+                </>}
               </div>
               <p className={styles.derivedNote}>
-                100% means the batch matches the best distribution found by the calculator at this batch size. This is a geometric coverage score, not a prediction of winning probability.
+                {batchResult.mode === "population"
+                  ? "Gold dots are a deterministic population-weighted centroid reference seeded at the D–G population peak. Lines use minimum-total-distance one-to-one matching. RMS displacement is the primary error; the percentage is a bounded display score."
+                  : "100% means the batch matches the best distribution found by the calculator at this batch size. This is a geometric coverage score, not a prediction of winning probability."}
               </p>
             </>
           )}
@@ -332,18 +360,22 @@ function BatchCoveragePlot({ result }: { result: ReturnType<typeof batchCoverage
   const sampleStep=Math.max(1, Math.ceil(result.space.length/3500));
   const space=result.space.filter((_,index)=>index%sampleStep===0);
   const xy=(point:{d:number;g:number})=>({x:x0+point.d*width,y:y0+(1-point.g)*height});
+  const peak=xy(result.peak);
   return (
     <div className={styles.coveragePlotCard}>
-      <div className={styles.plotTitle}><b>Your batch vs best-found distribution</b><span>NORMALIZED D–G SPACE</span></div>
-      <svg viewBox="0 0 600 350" className={styles.coveragePlot} role="img" aria-label="Batch coverage across normalized D and G space">
+      <div className={styles.plotTitle}><b>{result.mode==="population"?"Tickets vs population-weighted baseline":"Your batch vs best-found distribution"}</b><span>D–G SPACE</span></div>
+      <svg viewBox="0 0 600 350" className={styles.coveragePlot} role="img" aria-label="Batch distribution across D and G space">
         <rect x={x0} y={y0} width={width} height={height} className={styles.mapBackground} />
-        {space.map((point,index)=>{const p=xy(point);return <circle key={index} cx={p.x} cy={p.y} r="1" className={styles.coverageSpacePoint}/>;})}
+        {[0,.25,.5,.75,1].map(t=><g key={t}><line x1={x0+t*width} y1={y0} x2={x0+t*width} y2={y0+height} className={styles.coverageGrid}/><line x1={x0} y1={y0+t*height} x2={x0+width} y2={y0+t*height} className={styles.coverageGrid}/><text x={x0+t*width} y="331" textAnchor="middle" className={styles.axisLabel}>{(1+t*(result.dMax-1)).toFixed(1)}</text><text x="38" y={y0+(1-t)*height+3} textAnchor="end" className={styles.axisLabel}>{(t*result.gMax).toFixed(2)}</text></g>)}
+        {space.map((point,index)=>{const p=xy(point),opacity=result.mode==="population"?0.08+0.72*Math.sqrt(point.weight/result.peak.weight):0.18;return <circle key={index} cx={p.x} cy={p.y} r={result.mode==="population"?1.35:1} className={styles.coverageSpacePoint} style={{opacity}}/>;})}
+        {result.mode==="population"&&result.assignment.map(([ri,ai],index)=>{const a=xy(result.reference[ri]),b=xy(result.actual[ai]);return <line key={`m${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={styles.matchLine}/>;})}
         {result.reference.map((point,index)=>{const p=xy(point);return <g key={`r${index}`}><line x1={p.x-5} y1={p.y-5} x2={p.x+5} y2={p.y+5} className={styles.referenceMark}/><line x1={p.x-5} y1={p.y+5} x2={p.x+5} y2={p.y-5} className={styles.referenceMark}/></g>;})}
         {result.actual.map((point,index)=>{const p=xy(point);return <g key={`a${index}`}><circle cx={p.x} cy={p.y} r="5" className={styles.batchPoint}/><text x={p.x+7} y={p.y-6} className={styles.pointLabel}>{index+1}</text></g>;})}
-        <text x="260" y="340" className={styles.axisLabel}>normalized D</text>
-        <text x="15" y="190" transform="rotate(-90 15 190)" className={styles.axisLabel}>normalized G</text>
+        {result.mode==="population"&&<g><circle cx={peak.x} cy={peak.y} r="8" className={styles.peakRing}/><text x={peak.x+10} y={peak.y+4} className={styles.peakLabel}>population peak</text></g>}
+        <text x="285" y="348" className={styles.axisLabel}>D</text>
+        <text x="13" y="190" transform="rotate(-90 13 190)" className={styles.axisLabel}>G</text>
       </svg>
-      <div className={styles.plotLegend}><span><i className={styles.legendActual}/>your tickets</span><span><i className={styles.legendReference}/>best-found reference</span></div>
+      <div className={styles.plotLegend}><span><i className={styles.legendActual}/>your tickets</span><span><i className={styles.legendReference}/>{result.mode==="population"?"population baseline":"best-found reference"}</span>{result.mode==="population"&&<span>background opacity = exact set density</span>}</div>
     </div>
   );
 }
