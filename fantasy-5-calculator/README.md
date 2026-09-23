@@ -11,7 +11,7 @@ This repository now contains the complete source closure for that live Floot bui
 - exact scale–translation base and range-conditioned tetrahedral q-space fiber;
 - exact positive-integer gap-composition and state counts;
 - certified exhaustive Fantasy 5 850,668-set / 38×38 D×G population map;
-- fail-closed input validation and responsive desktop/mobile layout.
+- D-space batch coverage with a top-level coverage score, best-found same-size reference, and normalized D–G plot;\n- fail-closed input validation and responsive desktop/mobile layout.
 
 ## Verify the export contract
 
