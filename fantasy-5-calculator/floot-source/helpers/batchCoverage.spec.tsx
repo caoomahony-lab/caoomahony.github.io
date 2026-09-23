@@ -13,12 +13,21 @@ describe("batchCoverage",()=>{
   });
   it("builds a population-weighted reference with one-to-one matching",()=>{
     const r=batchCoverage.analyze(tickets,"fantasy5","population");
-    expect(r.reference.length).toBe(3);expect(r.assignment.length).toBe(3);
-    expect(r.totalWeight).toBe(850668);expect(r.rmsDistance).toBeGreaterThanOrEqual(0);
+    expect(r.reference.length).toBe(3);expect(r.uniformReference.length).toBe(3);
+    expect(r.assignment.length).toBe(3);expect(r.rmsDistance).toBeGreaterThanOrEqual(0);
   });
   it("recovers the exact white-ball universe for all three games",()=>{
     expect(batchCoverage.analyze(tickets,"fantasy5","population").totalWeight).toBe(850668);
     expect(batchCoverage.analyze([[5,12,19,27,68],[2,18,31,49,69]],"powerball","population").totalWeight).toBe(11238513);
     expect(batchCoverage.analyze([[5,12,19,27,69],[2,18,31,49,70]],"megaMillions","population").totalWeight).toBe(12103014);
+  });
+  it("recovers the enrichment structure for all three games",()=>{
+    const f=batchCoverage.analyze(tickets,"fantasy5","population");
+    const p=batchCoverage.analyze([[5,12,19,27,68],[2,18,31,49,69]],"powerball","population");
+    const m=batchCoverage.analyze([[5,12,19,27,69],[2,18,31,49,70]],"megaMillions","population");
+    expect([f.occupiedClasses,f.highClassCount,f.highPopulation]).toEqual([902,81,227668]);
+    expect([p.occupiedClasses,p.highClassCount,p.highPopulation]).toEqual([1901,185,3809638]);
+    expect([m.occupiedClasses,m.highClassCount,m.highPopulation]).toEqual([1934,188,4104724]);
+    expect(f.quickPickRate).toBeCloseTo(227668/850668,12);
   });
 });

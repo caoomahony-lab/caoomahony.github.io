@@ -21,3 +21,5 @@ npm test
 ```
 
 The full runtime/scientific tests execute in Floot. At the recorded export, all three Floot spec files passed and the project typecheck was clean. See [`floot-source/manifest.json`](./floot-source/manifest.json) for the exact Floot project version and checkpoint.
+
+- High-enrichment-zone overlay: defines a game-specific dense core by matching the number of lowest-population classes that fit inside the peak class, then reports its exact legal-set share, enrichment ratio, entered-ticket hit rate, and equal-space vs population-weighted baseline distances.
