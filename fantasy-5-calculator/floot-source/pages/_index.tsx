@@ -368,32 +368,59 @@ L = (r/2)·A·P`}</pre>
 }
 
 function BatchCoveragePlot({ result }: { result: ReturnType<typeof batchCoverage.analyze> }) {
-  const x0=46, y0=24, width=504, height=286;
+  const [phone,setPhone]=useState(false);
+  React.useEffect(()=>{
+    const media=window.matchMedia("(max-width: 560px)");
+    const update=()=>setPhone(media.matches);
+    update();media.addEventListener("change",update);
+    return ()=>media.removeEventListener("change",update);
+  },[]);
+  const [selectedTicket,setSelectedTicket]=useState<number|null>(null);
+  const x0=phone?43:46, y0=phone?26:24, width=phone?282:504, height=phone?292:286;
+  const viewWidth=phone?360:600, viewHeight=phone?368:350;
   const sampleStep=Math.max(1, Math.ceil(result.space.length/3500));
   const space=result.space.filter((_,index)=>index%sampleStep===0);
   const xy=(point:{d:number;g:number})=>({x:x0+point.d*width,y:y0+(1-point.g)*height});
   const peak=xy(result.peak), cellW=width*result.dStep*.9, cellH=height*result.gStep*.9;
+  const actualPoints=result.actual.map(xy);
+  const numbered=result.count<=12&&actualPoints.every((a,i)=>actualPoints.every((b,j)=>i===j||Math.hypot(a.x-b.x,a.y-b.y)>(phone?23:17)));
+  const selected=selectedTicket===null?null:result.actual[selectedTicket];
+  const selectedPair=result.assignment.find(([,ai])=>ai===selectedTicket);
+  const weightedMarkers=[...result.actual.map(p=>({point:xy(p),weight:5})),...result.reference.map(p=>({point:xy(p),weight:2})),
+    ...result.uniformReference.map(p=>({point:xy(p),weight:1}))];
+  const badgePositions=[[12,-29],[-62,-29],[12,17],[-62,17]].map(([dx,dy])=>({x:peak.x+dx,y:peak.y+dy}));
+  const peakBadge=badgePositions.filter(p=>p.x>=x0+2&&p.x+50<=x0+width-2&&p.y>=y0+2&&p.y+16<=y0+height-2)
+    .sort((a,b)=>{
+      const overlap=(p:{x:number;y:number})=>weightedMarkers.reduce((sum,{point,weight})=>
+        sum+(point.x>=p.x-6&&point.x<=p.x+56&&point.y>=p.y-6&&point.y<=p.y+22?weight:0),0);
+      return overlap(a)-overlap(b);
+    })[0]||{x:Math.min(x0+width-52,Math.max(x0+2,peak.x+12)),y:Math.max(y0+2,peak.y-29)};
+  const ticks=phone?[0,.5,1]:[0,.25,.5,.75,1];
   return (
     <div className={styles.coveragePlotCard}>
       <div className={styles.plotTitle}><b>{result.mode==="population"?"Population vs equal-space baselines":"Your batch vs best-found distribution"}</b><span>D–G SPACE</span></div>
-      <svg viewBox="0 0 600 350" className={styles.coveragePlot} role="img" aria-label="Batch distribution across D and G space">
+      <svg viewBox={`0 0 ${viewWidth} ${viewHeight}`} className={styles.coveragePlot} role="group" aria-label="Ticket distribution across actual D and G values">
         <rect x={x0} y={y0} width={width} height={height} className={styles.mapBackground} />
-        {[0,.25,.5,.75,1].map(t=><g key={t}><line x1={x0+t*width} y1={y0} x2={x0+t*width} y2={y0+height} className={styles.coverageGrid}/><line x1={x0} y1={y0+t*height} x2={x0+width} y2={y0+t*height} className={styles.coverageGrid}/><text x={x0+t*width} y="331" textAnchor="middle" className={styles.axisLabel}>{(1+t*(result.dMax-1)).toFixed(1)}</text><text x="38" y={y0+(1-t)*height+3} textAnchor="end" className={styles.axisLabel}>{(t*result.gMax).toFixed(2)}</text></g>)}
+        {ticks.map(t=><g key={t}><line x1={x0+t*width} y1={y0} x2={x0+t*width} y2={y0+height} className={styles.coverageGrid}/><line x1={x0} y1={y0+t*height} x2={x0+width} y2={y0+t*height} className={styles.coverageGrid}/><text x={x0+t*width} y={y0+height+19} textAnchor="middle" className={styles.coverageTick}>{(1+t*(result.dMax-1)).toFixed(1)}</text><text x={x0-8} y={y0+(1-t)*height+4} textAnchor="end" className={styles.coverageTick}>{(t*result.gMax).toFixed(2)}</text></g>)}
         {result.mode==="population"&&result.highZone.map((cell,index)=>{const p=xy(cell);return <rect key={`hz${index}`} x={p.x-cellW/2} y={p.y-cellH/2} width={cellW} height={cellH} rx="1" className={styles.highZoneCell}/>;})}
-        {space.map((point,index)=>{const p=xy(point),opacity=result.mode==="population"?0.08+0.72*Math.sqrt(point.weight/result.peak.weight):0.18;return <circle key={index} cx={p.x} cy={p.y} r={result.mode==="population"?1.35:1} className={styles.coverageSpacePoint} style={{opacity}}/>;})}
-        {result.mode==="population"&&result.uniformReference.map((point,index)=>{const p=xy(point);return <rect key={`u${index}`} x={p.x-3.3} y={p.y-3.3} width="6.6" height="6.6" transform={`rotate(45 ${p.x} ${p.y})`} className={styles.uniformMark}/>;})}
-        {result.mode==="population"&&result.assignment.map(([ri,ai],index)=>{const a=xy(result.reference[ri]),b=xy(result.actual[ai]);return <line key={`m${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={styles.matchLine}/>;})}
-        {result.reference.map((point,index)=>{const p=xy(point);return <g key={`r${index}`}><line x1={p.x-5} y1={p.y-5} x2={p.x+5} y2={p.y+5} className={styles.referenceMark}/><line x1={p.x-5} y1={p.y+5} x2={p.x+5} y2={p.y-5} className={styles.referenceMark}/></g>;})}
-        {result.actual.map((point,index)=>{const p=xy(point);return <g key={`a${index}`}><circle cx={p.x} cy={p.y} r="5" className={styles.batchPoint}/><text x={p.x+7} y={p.y-6} className={styles.pointLabel}>{index+1}</text></g>;})}
-        {result.mode==="population"&&<g><circle cx={peak.x} cy={peak.y} r="8" className={styles.peakRing}/><text x={peak.x+10} y={peak.y+4} className={styles.peakLabel}>population peak</text></g>}
-        <text x="285" y="348" className={styles.axisLabel}>D</text>
-        <text x="13" y="190" transform="rotate(-90 13 190)" className={styles.axisLabel}>G</text>
+        {space.map((point,index)=>{const p=xy(point),opacity=result.mode==="population"?0.06+0.46*Math.sqrt(point.weight/result.peak.weight):0.16;return <circle key={index} cx={p.x} cy={p.y} r={result.mode==="population"?1.2:1} className={styles.coverageSpacePoint} style={{opacity}}/>;})}
+        {result.mode==="population"&&result.uniformReference.map((point,index)=>{const p=xy(point);return <rect key={`u${index}`} x={p.x-3.7} y={p.y-3.7} width="7.4" height="7.4" transform={`rotate(45 ${p.x} ${p.y})`} className={styles.uniformMark}/>;})}
+        {result.mode==="population"&&result.assignment.map(([ri,ai],index)=>{const a=xy(result.reference[ri]),b=actualPoints[ai];return Math.hypot(a.x-b.x,a.y-b.y)<(phone?10:8)?null:<line key={`m${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={selectedTicket===ai?styles.selectedMatchLine:styles.matchLine}/>;})}
+        {result.reference.map((point,index)=>{const p=xy(point),active=selectedPair?.[0]===index;return <g key={`r${index}`}><line x1={p.x-3.7} y1={p.y-3.7} x2={p.x+3.7} y2={p.y+3.7} className={styles.referenceMark}/><line x1={p.x-3.7} y1={p.y+3.7} x2={p.x+3.7} y2={p.y-3.7} className={styles.referenceMark}/>{active&&<circle cx={p.x} cy={p.y} r="8" className={styles.selectedReference}/>}</g>;})}
+        {result.mode==="population"&&<circle cx={peak.x} cy={peak.y} r="7" className={styles.peakRing}/>}
+        {result.actual.map((point,index)=>{const p=actualPoints[index],active=selectedTicket===index;return <g key={`a${index}`} role="button" tabIndex={0} aria-label={`Ticket ${index+1}, D ${(1+point.d*(result.dMax-1)).toFixed(2)}, G ${(point.g*result.gMax).toFixed(3)}`} aria-pressed={active} className={styles.ticketTarget} onClick={()=>setSelectedTicket(active?null:index)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();setSelectedTicket(active?null:index);}}}><title>{`Ticket ${index+1} · D ${(1+point.d*(result.dMax-1)).toFixed(2)} · G ${(point.g*result.gMax).toFixed(3)}`}</title><circle cx={p.x} cy={p.y} r={phone?15:12} className={styles.ticketHit}/>{active&&<circle cx={p.x} cy={p.y} r={phone?11.5:10} className={styles.ticketSelected}/>}<circle cx={p.x} cy={p.y} r={phone?8.5:7.4} className={styles.batchPoint}/>{numbered&&<text x={p.x} y={p.y+.4} textAnchor="middle" dominantBaseline="middle" className={styles.ticketNumber}>{index+1}</text>}</g>;})}
+        {result.mode==="population"&&<g className={styles.peakAnnotation}><line x1={peak.x} y1={peak.y} x2={peakBadge.x+25} y2={peakBadge.y+8} className={styles.peakLeader}/><rect x={peakBadge.x} y={peakBadge.y} width="50" height="16" rx="3" className={styles.peakBadge}/><text x={peakBadge.x+25} y={peakBadge.y+8} dominantBaseline="middle" textAnchor="middle" className={styles.peakLabel}>PEAK</text></g>}
+        <text x={x0+width/2} y={viewHeight-3} textAnchor="middle" className={styles.coverageAxisTitle}>D</text>
+        <text x="12" y={y0+height/2} textAnchor="middle" transform={`rotate(-90 12 ${y0+height/2})`} className={styles.coverageAxisTitle}>G</text>
       </svg>
       <div className={styles.plotLegend}>
-        <span><i className={styles.legendActual}/>your tickets</span>
-        <span><i className={styles.legendReference}/>{result.mode==="population"?"population baseline":"best-found reference"}</span>
-        {result.mode==="population"&&<><span><i className={styles.legendUniform}/>equal-space baseline</span><span><i className={styles.legendZone}/>high enrichment zone</span></>}
+        <span><i className={styles.legendActual}/>Your tickets</span>
+        <span><i className={styles.legendReference}/>{result.mode==="population"?"Population baseline":"Best-found reference"}</span>
+        {result.mode==="population"&&<><span><i className={styles.legendUniform}/>Equal-space baseline</span><span><i className={styles.legendZone}/>High enrichment zone</span></>}
       </div>
+      <div className={styles.plotSelection} aria-live="polite">{selectedTicket!==null&&selected
+        ? <>Ticket <b>#{selectedTicket+1}</b> · D {(1+selected.d*(result.dMax-1)).toFixed(2)} · G {(selected.g*result.gMax).toFixed(3)}{result.mode==="population"&&selectedPair&&<> · Paired with population baseline <b>#{selectedPair[0]+1}</b></>}</>
+        : "Tap or focus a cyan ticket to see its number and paired reference."}</div>
     </div>
   );
 }

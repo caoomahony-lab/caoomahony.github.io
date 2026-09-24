@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "project": "Lottery Geometry Calculator",
   "flootProjectId": "6b90f228-9b81-4511-9e6b-1c2f94e83ac9",
-  "flootProjectVersion": 1790139404525,
-  "flootCheckpointId": "59f95f91-3fce-44bd-b8c3-4a7c421f20d6",
+  "flootProjectVersion": 1790140018087,
+  "flootCheckpointId": "efaeec39-e1fe-4ca3-9e1c-ab7387dd91f9",
   "publishedUrl": "https://fantasy5-geometry.floot.app",
-  "exportedAt": "2026-09-23T04:40:00Z",
+  "exportedAt": "2026-09-24T07:18:17Z",
   "verification": {
     "flootTypecheck": "clean",
     "flootSpecs": {
@@ -13,12 +13,11 @@
       "filesFailed": 0
     },
     "browserAcceptance": [
-      "D-space coverage appears before the distribution plot and single-ticket detail",
-      "Fantasy 5 exact D×G reference",
-      "Powerball canonical example",
-      "Mega Millions legal random range",
-      "fail-closed duplicate validation",
-      "production-origin console clean"
+      "Preview: population and uniform modes switch correctly on all three games",
+      "Preview: 393px iPhone and desktop graph layouts remain bounded",
+      "Preview: Powerball comma/space paste ignores the sixth special ball",
+      "Preview: Mega Millions 16-draw batch reproduces RMS 0.2113 / 0.3584 and high-zone 5/16",
+      "Production-origin verification pending republish"
     ],
     "populationWeightedUniverses": {
       "fantasy5": 850668,
@@ -60,6 +59,10 @@
     "floot-source/components/Button.module.css",
     "floot-source/components/Select.tsx",
     "floot-source/components/Select.module.css",
+    "floot-source/components/Textarea.tsx",
+    "floot-source/components/Textarea.module.css",
+    "floot-source/components/Switch.tsx",
+    "floot-source/components/Switch.module.css",
     "floot-source/base.css",
     "floot-source/helpers/batchCoverage.tsx",
     "floot-source/helpers/batchCoverage.spec.tsx"

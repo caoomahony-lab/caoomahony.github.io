@@ -19,6 +19,10 @@ const required = [
   "components/Button.module.css",
   "components/Select.tsx",
   "components/Select.module.css",
+  "components/Textarea.tsx",
+  "components/Textarea.module.css",
+  "components/Switch.tsx",
+  "components/Switch.module.css",
   "base.css",
   "manifest.json",
   "README.md",
@@ -49,7 +53,7 @@ test("locks the scientific authorities and provenance", () => {
   assert.match(fantasy, /occupiedCells/);
   assert.match(state, /statesAtR:shapeCount\*translations/);
   assert.match(state, /lambda:1-1\/D/);
-  assert.equal(manifest.flootCheckpointId, "aae1c03e-6226-4c32-b5df-3793c38b6cab");
+  assert.equal(manifest.flootCheckpointId, "efaeec39-e1fe-4ca3-9e1c-ab7387dd91f9");
   assert.equal(manifest.publishedUrl, "https://fantasy5-geometry.floot.app");
   assert.equal(manifest.verification.flootSpecs.filesFailed, 0);
 });
