@@ -1,0 +1,2 @@
+Trigger production deployment after Vercel Git settings fix.
+Canonical HHF-3.8 production trigger.
