@@ -24,3 +24,7 @@ Saved fingerprints use browser localStorage only. Audio files are not uploaded o
 ## Scope boundary
 
 This does not claim to be the frozen HHF-4 fingerprint schema. It is an interaction prototype for the eventual Savant explorer and gives the current Vercel app a useful multi-piece comparison workflow without duplicating DSP.
+
+## Deployment source
+
+Production should build from this canonical branch with `holographic-harmony` as the Vercel root directory.
