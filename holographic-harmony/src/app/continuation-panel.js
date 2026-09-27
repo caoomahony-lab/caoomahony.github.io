@@ -61,19 +61,36 @@ export class ContinuationPanel {
     this.root.classList.add("hs-continuation-panel");
     this.root.innerHTML = "";
 
-    const heading = el("div", "hs-panel-heading");
-    const title = el("div");
-    title.append(el("div", "eyebrow", "HARMONIC SAVANT · CONTINUE"), el("h2", "hs-title", "Function, voicing & continuation lab"));
+    this.shell = document.createElement("details");
+    this.shell.className = "hs-compose-shell";
+
+    const summary = document.createElement("summary");
+    summary.className = "hs-compose-summary";
+    const summaryText = el("div", "hs-compose-summary-text");
+    summaryText.append(
+      el("div", "eyebrow", "HARMONIC SAVANT · COMPOSE"),
+      el("strong", "hs-compose-title", "Continue this harmony"),
+      el("span", "hs-compose-subtitle", "Progression analysis, voicing and continuation")
+    );
     this.engineBadge = el("div", "status-pill", "HHF-3");
-    heading.append(title, this.engineBadge);
+    summary.append(summaryText, this.engineBadge);
 
-    const intro = el("p", "hs-intro", "Enter your own progression. Functional language, target-key translation and continuation objectives all come from the tested core engine; this panel adds no separate theory rules.");
-
+    const body = el("div", "hs-compose-body");
     this.progression = document.createElement("textarea");
     this.progression.className = "hs-textarea";
     this.progression.rows = 2;
     this.progression.value = "Cmaj7 | E7/G# | Am9 | Fmaj7";
     this.progression.spellcheck = false;
+    body.append(field("Chord progression", this.progression, "Use |, comma, semicolon, newline, or spaces."));
+
+    const autoContext = el("div", "hs-auto-context");
+    autoContext.append(
+      el("span", "hs-auto-dot", "●"),
+      el("span", "", "Context inferred automatically"),
+      el("span", "hs-auto-separator", "·"),
+      el("span", "", "Current active/shadow field used when available")
+    );
+    body.append(autoContext);
 
     this.contextTonic = document.createElement("input");
     this.contextTonic.className = "hs-input";
@@ -104,34 +121,37 @@ export class ContinuationPanel {
     this.useCurrentField.type = "checkbox";
     this.useCurrentField.checked = true;
     const fieldToggle = el("label", "hs-checkbox");
-    fieldToggle.append(this.useCurrentField, el("span", "", "Use current visualizer active/shadow field when available"));
+    fieldToggle.append(this.useCurrentField, el("span", "", "Use current visualizer active/shadow field"));
 
+    const advanced = document.createElement("details");
+    advanced.className = "hs-advanced";
+    advanced.append(el("summary", "", "Advanced options"));
     const grid = el("div", "hs-form-grid");
-    const progressionField = field("Chord progression", this.progression, "Use |, comma, semicolon, newline, or spaces for simple symbols.");
-    progressionField.classList.add("hs-field-wide");
     grid.append(
-      progressionField,
       field("Context tonic", this.contextTonic, "Leave blank to preserve competing inferred contexts."),
       field("System", this.system, "Used when a context tonic is declared."),
       field("Translate to key", this.targetTonic, "Optional functional re-rendering."),
       field("Current voicing", this.voicing, "Optional note names or MIDI; enables registered voice-leading."),
-      field("Ranking preset", this.preset, "Visible preset only; blank means no composite ranking."),
+      field("Ranking preset", this.preset, "Optional composite objective."),
       field("Missing evidence", this.missingPolicy, "Applies only when a ranking preset is selected.")
     );
+    advanced.append(grid, fieldToggle);
+    body.append(advanced);
 
     const actions = el("div", "hs-actions");
-    this.runButton = el("button", "hs-primary", "Analyze & continue");
+    this.runButton = el("button", "hs-primary", "Generate continuations");
     this.runButton.type = "button";
     this.exportButton = el("button", "hs-secondary", "Copy JSON");
     this.exportButton.type = "button";
     this.exportButton.disabled = true;
     this.actionStatus = el("span", "hs-action-status", "");
     actions.append(this.runButton, this.exportButton, this.actionStatus);
+    body.append(actions);
 
     this.output = el("div", "hs-output");
-    this.output.append(el("div", "hs-empty", "No continuation session yet."));
-
-    this.root.append(heading, intro, grid, fieldToggle, actions, this.output);
+    body.append(this.output);
+    this.shell.append(summary, body);
+    this.root.append(this.shell);
   }
 
   bind() {
