@@ -71,7 +71,7 @@ export class FingerprintExplorer {
     if(!this.corpus.length){this.results.append(el("div","diag-sub","Save at least one analyzed piece to start nearest-neighbor search."));return;}
     const target=this.target();
     this.corpus.map(x=>({...x,d:fingerprintDistance(target,x.features)})).sort((a,b)=>a.d-b.d).slice(0,5).forEach((item,i)=>{
-      const row=el("button","fingerprint-result"),rank=el("span","fingerprint-rank",`#${i+1}`),name=el("span","fingerprint-name",item.title),score=el("span","fingerprint-distance",`${Math.round((1-item.d)*100)}% match`);
+      const row=el("button","fingerprint-result"),rank=el("span","fingerprint-rank",`#${i+1}`),name=el("span","fingerprint-name",item.title),score=el("span","fingerprint-distance",`${Math.round(100*clamp01(1-item.d))}% similarity`);
       row.type="button";row.onclick=()=>{this.setTarget(item.features);this.renderNearest();};row.append(rank,name,score);this.results.append(row);
     });
   }
