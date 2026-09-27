@@ -1,6 +1,7 @@
 import { CollectionAwareHolographicHarmonyApp } from "./collection-aware-app.js";
 import { ContinuationPanel } from "./continuation-panel.js";
 import { complementField } from "../theory/fields.js";
+import { FingerprintExplorer } from "./fingerprint-explorer.js";
 
 export class HarmonicSavantApp {
   constructor(root, tracks) {
@@ -12,11 +13,14 @@ export class HarmonicSavantApp {
 
     this.visualizerRoot = document.createElement("div");
     this.visualizerRoot.className = "harmonic-savant-visualizer-host";
+    this.explorerRoot = document.createElement("section");
     this.continuationRoot = document.createElement("div");
     this.continuationRoot.className = "harmonic-savant-continuation-host";
-    this.root.append(this.visualizerRoot, this.continuationRoot);
+    this.root.append(this.visualizerRoot, this.explorerRoot, this.continuationRoot);
 
     this.visualizer = new CollectionAwareHolographicHarmonyApp(this.visualizerRoot, tracks);
+    this.explorer = new FingerprintExplorer(this.explorerRoot);
+    this.root.addEventListener("harmonic-savant:fingerprint-ready", (event) => this.explorer.accept(event.detail));
     this.continuation = new ContinuationPanel(this.continuationRoot, {
       getHolographicContext: () => this.currentHolographicContext()
     });

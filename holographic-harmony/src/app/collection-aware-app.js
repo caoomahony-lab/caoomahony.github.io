@@ -155,6 +155,10 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
         `Registered-note beta: ${analysis.registeredNoteEvents.length} inferred note events with octave/register across ${Math.round(analysis.registeredFrameShare * 100)}% of analysis frames. Audio → MusicXML remains disabled until rhythm/voice quantization is reliable.`
       );
       this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} frames · ${analysis.registeredNoteEvents.length} inferred registered-note events · ${harmony.segmentCount} inferred micro-segments → ${harmony.regionCount} inferred harmonic regions. Nothing was uploaded by Harmonic Savant.`;
+      this.root.dispatchEvent(new CustomEvent("harmonic-savant:fingerprint-ready", {
+        bubbles: true,
+        detail: { title: file.name, analysis, harmony, collectionCandidate: overallCandidate }
+      }));
       this.renderHarmonicTimeline();
       this.renderAt(0, true);
     } catch (error) {

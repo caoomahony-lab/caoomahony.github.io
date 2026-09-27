@@ -205,3 +205,16 @@ select {
   .score-converter { align-items: stretch; }
   .score-export-button { width: 100%; }
 }
+
+
+/* HHF-3.8 local Savant fingerprint explorer */
+.fingerprint-explorer{margin:14px auto 0;padding:14px;border:1px solid #172a3f;background:linear-gradient(180deg,rgba(12,25,40,.96),rgba(7,16,28,.96));border-radius:16px}
+.fingerprint-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.fingerprint-head .timeline-title{margin-right:auto}
+.fingerprint-status{color:#7890ad;font-size:11px;line-height:1.45;margin:8px 2px 12px}
+.fingerprint-secondary{color:#9ecfff;background:#0c1928;border:1px solid #23405e;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}.fingerprint-secondary:disabled{opacity:.35}
+.fingerprint-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 14px}
+.fingerprint-control{display:grid;grid-template-columns:minmax(100px,1fr) minmax(110px,2fr) 34px;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(70,104,142,.16)}
+.fingerprint-control input{width:100%;accent-color:#8ebeff}.fingerprint-value{font-size:11px;color:#9ecfff;text-align:right;font-variant-numeric:tabular-nums}
+.fingerprint-results{display:grid;gap:7px;margin-top:12px}.fingerprint-result{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;text-align:left;color:#dceaff;background:#091421;border:1px solid #203b58;border-radius:10px;padding:9px 10px;cursor:pointer}
+.fingerprint-rank{color:#7890ad;font-size:10px}.fingerprint-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fingerprint-distance{color:#9ecfff;font-size:11px}
+@media(max-width:620px){.fingerprint-grid{grid-template-columns:1fr}.fingerprint-control{grid-template-columns:100px minmax(90px,1fr) 30px}.fingerprint-result{grid-template-columns:28px minmax(0,1fr) auto}}
