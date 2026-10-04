@@ -1,9 +1,12 @@
-import { generateDemoWav } from "./generate-demo-wav.mjs";
+import { generateDemoWav, generateVoiceLeadingWav } from "./generate-demo-wav.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-await generateDemoWav(path.join(root, "public/tracks/demo.wav"));
+await Promise.all([
+  generateDemoWav(path.join(root, "public/tracks/demo.wav")),
+  generateVoiceLeadingWav(path.join(root, "public/tracks/chromatic-voice-leading.wav"))
+]);
 const dist = path.join(root, "dist");
 await fs.rm(dist, { recursive: true, force: true });
 await fs.mkdir(dist, { recursive: true });

@@ -4,10 +4,11 @@ import fs from "node:fs";
 import { LiteDOMParser } from "../src/music/xml-lite.js";
 import { parseMusicXML } from "../src/music/musicxml.js";
 
-const xml = fs.readFileSync(new URL("../public/tracks/demo.musicxml", import.meta.url), "utf8");
+const demoXml = fs.readFileSync(new URL("../public/tracks/demo.musicxml", import.meta.url), "utf8");
+const voiceLeadingXml = fs.readFileSync(new URL("../public/tracks/chromatic-voice-leading.musicxml", import.meta.url), "utf8");
 
 test("demo MusicXML parses into timed pitch-class events", () => {
-  const parsed = parseMusicXML(xml, LiteDOMParser);
+  const parsed = parseMusicXML(demoXml, LiteDOMParser);
   assert.equal(parsed.parts, 1);
   assert.equal(parsed.notes.length, 32);
   assert.equal(parsed.notes[0].pitchClass, 11);
@@ -18,11 +19,33 @@ test("demo MusicXML parses into timed pitch-class events", () => {
 });
 
 test("shadow admissions in demo begin D-A-E-C-G", () => {
-  const parsed = parseMusicXML(xml, LiteDOMParser);
+  const parsed = parseMusicXML(demoXml, LiteDOMParser);
   const shadow = new Set([0, 2, 4, 7, 9]);
   const seen = [];
   for (const note of parsed.notes) {
     if (shadow.has(note.pitchClass) && !seen.includes(note.pitchClass)) seen.push(note.pitchClass);
   }
   assert.deepEqual(seen, [2, 9, 4, 0, 7]);
+});
+
+test("chromatic voice-leading progression parses as eight two-second triads", () => {
+  const parsed = parseMusicXML(voiceLeadingXml, LiteDOMParser);
+  assert.equal(parsed.parts, 1);
+  assert.equal(parsed.notes.length, 24);
+  assert.deepEqual(parsed.notes.slice(0, 3).map((note) => note.pitchClass), [6, 10, 1]);
+  assert.deepEqual(parsed.notes.slice(3, 6).map((note) => note.pitchClass), [6, 10, 3]);
+  assert.ok(Math.abs(parsed.notes[3].onset - 2) < 1e-9);
+  assert.ok(Math.abs(parsed.notes[21].onset - 14) < 1e-9);
+  assert.ok(Math.abs(parsed.durationSeconds - 16) < 1e-9);
+  assert.equal(parsed.tempoEvents[0].bpm, 120);
+});
+
+test("F#-major reference field sees D then A as the progression shadow admissions", () => {
+  const parsed = parseMusicXML(voiceLeadingXml, LiteDOMParser);
+  const shadow = new Set([0, 2, 4, 7, 9]);
+  const seen = [];
+  for (const note of parsed.notes) {
+    if (shadow.has(note.pitchClass) && !seen.includes(note.pitchClass)) seen.push(note.pitchClass);
+  }
+  assert.deepEqual(seen, [2, 9]);
 });

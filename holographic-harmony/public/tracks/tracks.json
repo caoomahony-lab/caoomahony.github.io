@@ -11,14 +11,62 @@
       "field": {
         "name": "B Lydian / F# collection",
         "center": 11,
-        "pcs": [11, 1, 3, 5, 6, 8, 10]
+        "pcs": [
+          11,
+          1,
+          3,
+          5,
+          6,
+          8,
+          10
+        ]
       },
       "latentCenter": 0,
-      "shadowAdmissionOrder": [2, 9, 4, 0, 7],
+      "shadowAdmissionOrder": [
+        2,
+        9,
+        4,
+        0,
+        7
+      ],
       "activity": {
         "lookbackSeconds": 7,
         "attackTau": 1.7,
         "releaseTau": 3.8
+      }
+    }
+  },
+  {
+    "id": "chromatic-voice-leading-fsharp",
+    "title": "Chromatic voice-leading — F♯ → E♭m → B♭ → Bm → B → C♯sus4 → F♯m → F♯",
+    "score": "./public/tracks/chromatic-voice-leading.musicxml",
+    "audio": "./public/tracks/chromatic-voice-leading.wav",
+    "audioOffset": 0,
+    "durationHint": 16,
+    "analysis": {
+      "mode": "paper",
+      "field": {
+        "name": "F# major reference field",
+        "center": 6,
+        "pcs": [
+          1,
+          3,
+          5,
+          6,
+          8,
+          10,
+          11
+        ]
+      },
+      "latentCenter": 6,
+      "shadowAdmissionOrder": [
+        2,
+        9
+      ],
+      "activity": {
+        "lookbackSeconds": 3.5,
+        "attackTau": 0.45,
+        "releaseTau": 1.4
       }
     }
   }
