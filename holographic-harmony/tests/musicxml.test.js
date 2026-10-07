@@ -32,8 +32,9 @@ test("chromatic voice-leading progression parses as eight two-second triads", ()
   const parsed = parseMusicXML(voiceLeadingXml, LiteDOMParser);
   assert.equal(parsed.parts, 1);
   assert.equal(parsed.notes.length, 24);
-  assert.deepEqual(parsed.notes.slice(0, 3).map((note) => note.pitchClass), [6, 10, 1]);
-  assert.deepEqual(parsed.notes.slice(3, 6).map((note) => note.pitchClass), [6, 10, 3]);
+  // Simultaneous notes are returned in ascending pitch-class order, not XML order.
+  assert.deepEqual(parsed.notes.slice(0, 3).map((note) => note.pitchClass), [1, 6, 10]);
+  assert.deepEqual(parsed.notes.slice(3, 6).map((note) => note.pitchClass), [3, 6, 10]);
   assert.ok(Math.abs(parsed.notes[3].onset - 2) < 1e-9);
   assert.ok(Math.abs(parsed.notes[21].onset - 14) < 1e-9);
   assert.ok(Math.abs(parsed.durationSeconds - 16) < 1e-9);

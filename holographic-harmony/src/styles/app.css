@@ -251,3 +251,9 @@ select {
 .pairwise-families{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.pairwise-family{display:flex;justify-content:space-between;align-items:baseline;gap:5px;background:#0d1a2a;border:1px solid rgba(48,78,111,.55);border-radius:9px;padding:7px 8px}
 .pairwise-label{color:#7890ad;font-size:9px;text-transform:uppercase;letter-spacing:.07em}.pairwise-score{color:#e5f1ff;font-size:16px}.pairwise-note{color:#6f89a8;font-size:9px;line-height:1.4}
 @media(max-width:520px){.pairwise-head{grid-template-columns:26px minmax(0,1fr)}.pairwise-distance{grid-column:2}.pairwise-families{gap:5px}.pairwise-family{display:grid;gap:2px;padding:6px}.pairwise-score{font-size:15px}}
+
+/* Additive HHF-3.9.1 comparison audit */
+.pairwise-mode{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;color:#b8d4f5;font-size:12px}
+.pairwise-mode select{max-width:100%;min-width:0;background:#0d1a2a;color:#dcecff;border:1px solid #29496c;border-radius:8px;padding:8px;font:inherit}
+.pairwise-warning{color:#e2bd83;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.pairwise-order{color:#b8d4f5;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
