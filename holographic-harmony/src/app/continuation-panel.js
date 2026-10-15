@@ -35,7 +35,7 @@ function option(value, label) {
 }
 
 function pct(value) {
-  return Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
+  return typeof value === "number" && Number.isFinite(value) ? `${Math.round(value * 100)}/100` : "—";
 }
 
 function midiName(midi) {
@@ -76,6 +76,7 @@ export class ContinuationPanel {
     summary.append(summaryText, this.engineBadge);
 
     const body = el("div", "hs-compose-body");
+    this.body = body;
     this.progression = document.createElement("textarea");
     this.progression.className = "hs-textarea";
     this.progression.rows = 2;
@@ -91,6 +92,7 @@ export class ContinuationPanel {
       el("span", "", "Current active/shadow field used when available")
     );
     body.append(autoContext);
+    this.autoContext = autoContext;
 
     this.contextTonic = document.createElement("input");
     this.contextTonic.className = "hs-input";
@@ -228,7 +230,7 @@ export class ContinuationPanel {
         row.append(el("span", "", `${pitchClassName(hypothesis.centerPc)} ${hypothesis.systemName}`), el("span", "", `relative weight ${pct(hypothesis.relativeWeight)}`));
         hypotheses.append(row);
       }
-      card.append(hypotheses, el("div", "hs-small-note", "Relative weights compare current hypotheses only; they are not calibrated probabilities."));
+      card.append(hypotheses, el("div", "hs-small-note", "Relative weights compare current hypotheses only; these indices are not calibrated probabilities."));
     }
     return card;
   }

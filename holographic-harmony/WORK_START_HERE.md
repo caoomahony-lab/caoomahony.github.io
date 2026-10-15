@@ -11,6 +11,50 @@ Read these in order:
 
 If a work ticket, deployment convenience, framework limitation, or implementation preference conflicts with `PROJECT_CONSTITUTION.md`, stop and report the conflict. Do not silently shrink the goal.
 
+## Latest similarity validation checkpoint
+
+The song-linked workbench and reliability audit are described in
+`HHF3_10_SONG_WORKBENCH_AUDIT.md` on `harmonic-savant-hhf3.10-song-workbench`.
+The bottom progression now follows the selected song chord, with local worker
+continuations, hypothetical second steps, five sourced popular progression
+references and personal feeling annotations. Existing theory, HIR, catalog,
+comparison metrics and manual sketch mode are preserved. Full audio HIR,
+calibrated feelings, large popular-song search and passage matching remain pending.
+
+The shared symbolic-score representation is now described in
+`HHF3_9_5_SHARED_HIR.md` on `harmonic-savant-hhf3.9.5-shared-hir`:
+versioned HarmonicState/HIR, nine integrated fingerprint blocks, browser/CLI
+exports, and HIR projection into the existing eight comparison metrics.
+Audio/Observable migration, local/sectional trajectories and the four remaining
+fingerprint blocks are still pending. The 500-reference catalog and saved-data
+versions are unchanged; this does not freeze the complete Fingerprint V1.
+Browser/Node HIR imports now tolerate bounded floating-point rounding while
+rebuilding derived evidence. Opening audio retains the catalog, and loading a
+matching MusicXML enables measured-score comparisons without closing the audio.
+The checkpoint passes 264 automated tests; deployment/browser acceptance and
+the master-plan comparison are recorded in its accompanying completion report.
+
+The external reference pilot is now described in `HHF3_9_4_REFERENCE_CATALOG.md`
+on `harmonic-savant-hhf3.9.4-reference-catalog`: 500 PDMX score fingerprints,
+local catalog comparisons, metadata filters, explicit distribution-vs-order
+search scope, checksum-validated shards and reproducible ingestion. This is a
+bounded experimental corpus; the common HIR and full fingerprint pipeline
+remain the next architectural gate before authoritative large-scale search.
+
+The score comparison is now connected to the app in `HHF3_9_3_SCORE_COMPARISON.md`
+on `harmonic-savant-hhf3.9.3-score-compare`. It preserves prior experimental
+methods and adds local score saving, explicit component ranking, invariant
+score attack/candidate representations, worker computation and JSON export.
+The master-plan audit distinguishes this completed checkpoint from the
+unfinished broader product.
+
+Continue from `HHF3_9_2_SCORE_VALIDATION.md` on
+`harmonic-savant-hhf3.9.2-score-validation` for the current comparison work.
+It builds on the evidence-aware audit at `8015244`, adds direct symbolic-score
+validation and measured sonority order, and documents remaining transposition,
+tempo and browser-upload limits. Both similarity methods remain experimental;
+private score sources and per-piece validation reports stay outside Git.
+
 ## Mission
 
 Build and deploy the Harmonic Savant system as a reusable, platform-independent harmonic-analysis engine with Holographic Harmony visualization. The current v0.1 visualizer is the first working front end, not the final product boundary.

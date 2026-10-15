@@ -20,6 +20,9 @@ const root = document.querySelector("#app");
 if (root) {
   mountHarmonicSavant(root).catch((error) => {
     console.error(error);
-    root.innerHTML = `<pre class="fatal-error">${error.message}</pre>`;
+    const message = document.createElement("pre");
+    message.className = "fatal-error";
+    message.textContent = error?.message || String(error);
+    root.replaceChildren(message);
   });
 }

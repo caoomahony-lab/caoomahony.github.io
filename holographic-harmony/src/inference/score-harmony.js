@@ -149,7 +149,7 @@ export function inferScoreHarmony(notesRaw, options = {}) {
       bassPc: region.bassPc,
       weight: region.duration
     }));
-    harmonicAnalysis = sequence.length ? analyzeHarmonicObjectSequence(sequence) : null;
+    harmonicAnalysis = sequence.length && options.includeHarmonicAnalysis !== false ? analyzeHarmonicObjectSequence(sequence) : null;
   } catch {
     harmonicAnalysis = null;
   }

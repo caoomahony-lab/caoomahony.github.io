@@ -277,3 +277,20 @@
 .hs-advanced{margin:6px 0 12px;border:1px solid rgba(61,93,130,.35);border-radius:11px;background:rgba(4,12,22,.28)}.hs-advanced>summary{cursor:pointer;color:#9fb9d9;font-size:11px;font-weight:750;padding:10px 12px}.hs-advanced>.hs-form-grid{padding:0 12px 12px}.hs-advanced>.hs-checkbox{margin:0 12px 12px}
 .hs-compose-body>.hs-field .hs-textarea{min-height:76px}.hs-compose-body>.hs-actions{margin-top:4px}.hs-output:empty{display:none}
 @media(max-width:600px){.hs-compose-summary{padding:15px 13px}.hs-compose-body{padding:0 13px 14px}.hs-compose-summary .status-pill{display:none}.hs-compose-title{font-size:21px}.hs-compose-subtitle{font-size:10px}.hs-compose-body>.hs-actions .hs-primary{flex:1 1 100%;min-height:46px}.hs-compose-body>.hs-actions .hs-secondary{flex:0 0 auto}}
+
+/* Song-linked continuation workbench. */
+.hs-song-controls{display:grid;gap:10px;padding:14px;margin-bottom:14px;border:1px solid #29476a;border-radius:14px;background:#0b192a}
+.hs-song-title{color:#edf5ff;overflow-wrap:anywhere}.hs-song-chords{display:grid;gap:8px;min-width:0}
+.hs-song-chords input[type=range]{width:100%;min-height:32px;accent-color:#8ebeff}
+.hs-song-position,.hs-actual-next{font-size:12px;line-height:1.5;color:#bed4ef}
+.hs-song-chord-list{display:flex;gap:6px;flex-wrap:wrap}.hs-song-chord-list button{min-height:38px;padding:7px 10px}
+.hs-song-chord-list button[aria-pressed=true]{border-color:#8ebeff;background:#234a75;color:#fff}
+.hs-reference-output{margin:12px 0}.hs-reference-match{padding:10px 0;border-top:1px solid #243750;line-height:1.5}
+.hs-reference-match a{color:#9acbff;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.hs-feeling-controls{display:grid;gap:8px;padding:14px;margin:12px 0;border:1px solid #263e5c;border-radius:12px}
+.hs-feeling-controls .hs-secondary{justify-self:start}.hs-branch-results{display:grid;gap:6px;margin-top:8px}.hs-branch-item{font-size:12px;line-height:1.5;padding:8px;border-left:2px solid #719cd0;background:#10243b}
+.hs-continuation-row>.hs-secondary{margin-top:10px;min-height:40px}.hs-song-controls select,.hs-song-controls input{max-width:100%}
+.hs-continuation-panel .hs-small-note{line-height:1.55}.hs-reference-output:empty{display:none}
+@media(max-width:600px){.hs-song-controls{padding:11px}.hs-song-controls .hs-field{min-width:0}.hs-feeling-controls .hs-secondary{width:100%;min-height:44px}.hs-song-chord-list button{min-height:44px}.hs-function-table{overflow-x:auto}}
+.hs-continuation-panel [hidden]{display:none!important}
+.hs-continuation-panel :is(input,select,textarea,button,summary,a):focus-visible{outline:2px solid #aacfff;outline-offset:3px}

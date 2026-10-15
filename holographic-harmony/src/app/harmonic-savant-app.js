@@ -1,7 +1,8 @@
 import { CollectionAwareHolographicHarmonyApp } from "./collection-aware-app.js";
-import { ContinuationPanel } from "./continuation-panel.js";
+import { SongContinuationPanel } from "./song-continuation-panel.js";
 import { complementField } from "../theory/fields.js";
 import { FingerprintExplorer } from "./fingerprint-explorer.js";
+import { ScoreComparisonPanel } from "./score-comparison-panel.js";
 
 export class HarmonicSavantApp {
   constructor(root, tracks) {
@@ -14,21 +15,54 @@ export class HarmonicSavantApp {
     this.visualizerRoot = document.createElement("div");
     this.visualizerRoot.className = "harmonic-savant-visualizer-host";
     this.explorerRoot = document.createElement("section");
+    this.scoreExplorerRoot = document.createElement("section");
     this.continuationRoot = document.createElement("div");
     this.continuationRoot.className = "harmonic-savant-continuation-host";
-    this.root.append(this.visualizerRoot, this.explorerRoot, this.continuationRoot);
+    this.root.append(this.visualizerRoot, this.scoreExplorerRoot, this.explorerRoot, this.continuationRoot);
 
     this.visualizer = new CollectionAwareHolographicHarmonyApp(this.visualizerRoot, tracks);
     this.explorer = new FingerprintExplorer(this.explorerRoot);
-    this.root.addEventListener("harmonic-savant:fingerprint-ready", (event) => this.explorer.accept(event.detail));
-    this.continuation = new ContinuationPanel(this.continuationRoot, {
-      getHolographicContext: () => this.currentHolographicContext()
+    this.scoreExplorer = new ScoreComparisonPanel(this.scoreExplorerRoot, {
+      onAnalysisReady: hir => this.visualizer.acceptHarmonicIR(hir)
     });
+    this.explorerRoot.hidden = true;
+    this.root.addEventListener("harmonic-savant:source-loading", () => {
+      this.scoreExplorer.invalidate(); this.explorer.current = null; this.explorer.render();
+      this.continuation?.invalidate();
+      this.explorerRoot.hidden = true; this.scoreExplorerRoot.hidden = false;
+    });
+    this.root.addEventListener("harmonic-savant:score-ready", (event) => {
+      if (event.detail.audioReference) this.scoreExplorer.setAudioSource({ title: this.visualizer.currentTrack?.title });
+      else this.explorerRoot.hidden = true;
+      this.scoreExplorer.accept(event.detail);
+    });
+    this.root.addEventListener("harmonic-savant:fingerprint-ready", (event) => {
+      this.scoreExplorer.setAudioSource(event.detail);
+      this.explorerRoot.hidden = false; this.explorer.accept(event.detail);
+    });
+    this.continuation = new SongContinuationPanel(this.continuationRoot, {
+      getHolographicContext: (region, song) => this.currentHolographicContext(region, song),
+      onSeek: time => this.visualizer.seekTo(time),
+      getScoreVoicing: region => {
+        if (!region) return null;
+        const time = (region.onset + region.end) / 2;
+        const notes = this.visualizer.notes.filter(note => note.onset <= time && note.onset + note.duration > time).map(note => note.midi);
+        const voicing = [...new Set(notes)].filter(Number.isFinite).sort((a, b) => a - b);
+        return voicing.length && voicing.length <= 6 ? voicing : null;
+      }
+    });
+    this.root.addEventListener("harmonic-savant:song-progression-ready", event => this.continuation.acceptSong(event.detail, Math.max(0, this.visualizer.lastRenderTime || 0)));
+    this.root.addEventListener("harmonic-savant:playback-position", event => this.continuation.followTime(event.detail));
   }
 
-  currentHolographicContext() {
+  currentHolographicContext(region = null, song = null) {
     if (!this.visualizer.currentTrack || !this.visualizer.activeField?.length) return null;
-    const activeField = Object.freeze([...this.visualizer.activeField]);
+    // Adaptive fields depend on playback history. Only attach the live field
+    // when the visualizer actually rendered the selected source and moment.
+    if (region && (song?.generation !== this.visualizer.generation ||
+      !Number.isFinite(this.visualizer.lastRenderTime) || this.visualizer.lastRenderTime < region.onset ||
+      this.visualizer.lastRenderTime >= region.end)) return null;
+    const activeField = Object.freeze([...(this.visualizer.currentHarmonicState?.deterministic.activeField ?? this.visualizer.activeField)]);
     return Object.freeze({
       activeField,
       shadowField: Object.freeze(complementField(activeField))

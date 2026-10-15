@@ -24,14 +24,18 @@ export function scoreCorpusContinuation(candidate, context = {}) {
     return Object.freeze({ available: false, score: null, reason: "no corpus evidence for candidate", evidenceClass: "empirical" });
   }
   if (typeof record === "number") {
+    if (!Number.isFinite(record) || record < 0 || record > 1) throw new TypeError("corpus score must be finite and between 0 and 1");
     return Object.freeze({ available: true, score: clamp01(record), evidenceClass: "empirical", raw: record, note: "Caller-supplied normalized corpus score." });
   }
   const count = Number(record.count ?? 0);
   const total = Number(record.total ?? context.corpusTotal ?? 0);
   const suppliedScore = record.score;
   let score;
-  if (suppliedScore != null) score = clamp01(suppliedScore);
-  else if (Number.isFinite(count) && count >= 0 && Number.isFinite(total) && total > 0) score = clamp01(count / total);
+  if (suppliedScore != null) {
+    if (!Number.isFinite(Number(suppliedScore)) || Number(suppliedScore) < 0 || Number(suppliedScore) > 1) throw new TypeError("corpus score must be finite and between 0 and 1");
+    score = Number(suppliedScore);
+  }
+  else if (Number.isFinite(count) && count >= 0 && Number.isFinite(total) && total > 0 && count <= total) score = count / total;
   else throw new TypeError("corpus evidence requires score or nonnegative count with positive total");
   return Object.freeze({ available: true, score, count: Number.isFinite(count) ? count : null, total: Number.isFinite(total) ? total : null, evidenceClass: "empirical", provenance: record.provenance ?? null, note: "Empirical only to the extent supported by supplied corpus provenance." });
 }
@@ -41,8 +45,9 @@ export function scoreStyleContinuation(candidate, context = {}) {
   if (record == null) {
     return Object.freeze({ available: false, score: null, reason: "no style evidence for candidate", evidenceClass: "empirical-or-model" });
   }
-  const score = typeof record === "number" ? clamp01(record) : clamp01(record.score);
-  if (typeof record !== "number" && !Number.isFinite(Number(record.score))) throw new TypeError("style evidence requires a finite score");
+  const value = typeof record === "number" ? record : record.score;
+  if (value == null || !Number.isFinite(Number(value)) || Number(value) < 0 || Number(value) > 1) throw new TypeError("style evidence requires a finite score between 0 and 1");
+  const score = Number(value);
   return Object.freeze({
     available: true,
     score,

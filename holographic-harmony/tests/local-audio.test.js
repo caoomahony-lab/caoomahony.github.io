@@ -1,7 +1,45 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { analyzePcmChroma, classifyLocalMusicFile, LOCAL_AUDIO_ANALYSIS_VERSION } from "../src/music/local-audio.js";
+import { createHash } from "node:crypto";
+import { analyzePcmChroma, analyzeLocalAudioFile, classifyLocalMusicFile, LOCAL_AUDIO_ANALYSIS_VERSION } from "../src/music/local-audio.js";
+
+test("local audio keeps the actual source-byte identity and closes its decoder", async () => {
+  const bytes = Uint8Array.from([1, 2, 3, 4]);
+  let closed = 0;
+  class Decoder {
+    async decodeAudioData() { return { sampleRate: 11025, length: 11025, numberOfChannels: 1, getChannelData: () => new Float32Array(11025) }; }
+    async close() { closed++; }
+  }
+  const result = await analyzeLocalAudioFile({ name: "test.wav", arrayBuffer: async () => bytes.buffer }, { AudioContextImpl: Decoder });
+  assert.equal(result.sourceId, `sha256:${createHash("sha256").update(bytes).digest("hex")}`);
+  assert.equal(closed, 1);
+});
+
+test("cancelled audio decode does not read channels or run stale chroma analysis", async () => {
+  const controller = new AbortController();
+  let resolveDecode, started;
+  const decoding = new Promise(resolve => { started = resolve; });
+  let closed = 0, channelsRead = 0;
+  class Decoder {
+    decodeAudioData() { started(); return new Promise(resolve => { resolveDecode = resolve; }); }
+    async close() { closed++; }
+  }
+  const pending = analyzeLocalAudioFile({ name: "test.wav", arrayBuffer: async () => Uint8Array.from([1]).buffer }, { AudioContextImpl: Decoder, signal: controller.signal });
+  const rejected = assert.rejects(pending, error => error.name === "AbortError");
+  await decoding;
+  controller.abort();
+  resolveDecode({ sampleRate: 11025, length: 11025, numberOfChannels: 1, getChannelData() { channelsRead++; throw new Error("Stale analysis must not read channels"); } });
+  await rejected;
+  assert.equal(closed, 1); assert.equal(channelsRead, 0);
+});
+
+test("already-cancelled audio does not allocate a decoder", async () => {
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(analyzeLocalAudioFile({ name: "test.wav" }, {
+    signal: controller.signal, AudioContextImpl: class { constructor() { throw new Error("Decoder must not be created"); } }
+  }), error => error.name === "AbortError");
+});
 
 function sine(sampleRate, seconds, frequency, amplitude = 1) {
   const samples = new Float32Array(Math.floor(sampleRate * seconds));

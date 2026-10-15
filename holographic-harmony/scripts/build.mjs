@@ -8,7 +8,7 @@ await Promise.all([
   generateVoiceLeadingWav(path.join(root, "public/tracks/chromatic-voice-leading.wav"))
 ]);
 const dist = path.join(root, "dist");
-await fs.rm(dist, { recursive: true, force: true });
+await fs.rm(dist, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 await fs.mkdir(dist, { recursive: true });
 
 for (const entry of ["index.html", "src", "public", "observable", "README.md", "WORK_START_HERE.md"]) {

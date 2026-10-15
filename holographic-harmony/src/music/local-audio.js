@@ -356,19 +356,39 @@ function downmixAudioBuffer(audioBuffer) {
 
 export async function analyzeLocalAudioFile(file, options = {}) {
   if (classifyLocalMusicFile(file) !== "audio") throw new TypeError("file is not recognized as audio");
+  const { signal } = options;
+  const checkCancelled = () => {
+    if (!signal?.aborted) return;
+    const error = new Error("Local audio analysis was cancelled");
+    error.name = "AbortError";
+    throw error;
+  };
+  checkCancelled();
   const AudioContextImpl = options.AudioContextImpl || globalThis.AudioContext || globalThis.webkitAudioContext;
   if (!AudioContextImpl) throw new Error("Web Audio decoding is unavailable in this browser");
   const context = new AudioContextImpl();
+  let closing;
+  const closeContext = () => {
+    if (typeof context.close === "function" && !closing) closing = Promise.resolve().then(() => context.close()).catch(() => {});
+    return closing;
+  };
+  signal?.addEventListener("abort", closeContext, { once: true });
   try {
     const bytes = await file.arrayBuffer();
+    checkCancelled();
+    const sourceDigest = await crypto.subtle.digest("SHA-256", bytes);
+    checkCancelled();
+    const sourceId = `sha256:${Array.from(new Uint8Array(sourceDigest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
     const decoded = await context.decodeAudioData(bytes.slice(0));
+    checkCancelled();
     const mono = downmixAudioBuffer(decoded);
-    return analyzePcmChroma(mono, decoded.sampleRate, options);
+    return Object.freeze({ ...analyzePcmChroma(mono, decoded.sampleRate, options), sourceId });
   } catch (error) {
+    checkCancelled();
+    if (error?.name === "AbortError") throw error;
     throw new Error(`Could not decode this audio file locally: ${error?.message || error}`);
   } finally {
-    if (typeof context.close === "function") {
-      try { await context.close(); } catch { /* no-op */ }
-    }
+    signal?.removeEventListener("abort", closeContext);
+    await closeContext();
   }
 }

@@ -36,6 +36,7 @@ const SUFFIX_TO_TEMPLATE = Object.freeze({
   "dim7": "diminished7",
   "°7": "diminished7",
   "augMaj7": "augmentedMajor7",
+  "aug(maj7)": "augmentedMajor7",
   "+maj7": "augmentedMajor7",
   "add9": "add9",
   "madd9": "minorAdd9",

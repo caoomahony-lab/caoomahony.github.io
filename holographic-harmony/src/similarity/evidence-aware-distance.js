@@ -62,16 +62,32 @@ export function deriveEvidenceAwareDescriptor({ analysis, harmony, fingerprintFe
 }
 
 function editCount(a, b, shift) {
-  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  let previous = Uint32Array.from({ length: b.length + 1 }, (_, i) => i);
+  let current = new Uint32Array(b.length + 1);
   for (let i = 1; i <= a.length; i++) {
-    const current = [i];
+    current[0] = i;
     for (let j = 1; j <= b.length; j++) {
       const equal = a[i - 1].rootPc === mod12(b[j - 1].rootPc + shift) && a[i - 1].family === b[j - 1].family;
       current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (equal ? 0 : 1));
     }
-    previous = current;
+    [previous, current] = [current, previous];
   }
   return previous[b.length];
+}
+
+// The same edit definition at a declared shift, for decompositions that must
+// keep one global alignment instead of optimizing every component separately.
+export function orderedHarmonyDistanceAtShift(a, b, shiftBToA, { maxCellUpdates = 3_000_000 } = {}) {
+  const counts = { regionsA: a?.length || 0, regionsB: b?.length || 0 };
+  if (!Number.isInteger(shiftBToA)) throw new TypeError("shiftBToA must be an integer");
+  const shift = mod12(shiftBToA);
+  if (!a?.length || !b?.length) return freeze({ distance: null, reason: "MISSING_ORDERED_HARMONY", shiftBToA: shift, ...counts });
+  if (a.length === b.length && a.every((token, i) => token.rootPc === mod12(b[i].rootPc + shift) && token.family === b[i].family)) {
+    return freeze({ distance: 0, edits: 0, shiftBToA: shift, reason: null, ...counts });
+  }
+  if (a.length * b.length > maxCellUpdates) return freeze({ distance: null, reason: "COMPUTE_LIMIT", shiftBToA: shift, ...counts });
+  const edits = editCount(a, b, shift);
+  return freeze({ distance: edits / Math.max(a.length, b.length), edits, shiftBToA: shift, reason: null, ...counts });
 }
 
 export function orderedHarmonyDistance(a, b, { maxCellUpdates = 3_000_000 } = {}) {

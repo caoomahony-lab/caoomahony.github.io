@@ -1,6 +1,44 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { deriveAudioFingerprint, fingerprintDistance, FINGERPRINT_DIMENSIONS } from "../src/app/fingerprint-explorer.js";
+import { deriveAudioFingerprint, fingerprintDistance, FINGERPRINT_DIMENSIONS, FingerprintExplorer, usableAudioDescriptor } from "../src/app/fingerprint-explorer.js";
+import { browserStorage } from "../src/app/browser-storage.js";
+
+test("audio library preserves unreadable saved records when saving usable records", () => {
+  const valid = { title: "usable", features: Object.fromEntries(FINGERPRINT_DIMENSIONS.map(([key]) => [key, .5])) };
+  const invalid = { title: "recoverable data", privateMarker: "preserve" };
+  let written;
+  const panel = { storage: { getItem: () => JSON.stringify([valid, invalid]), setItem: (_, value) => { written = JSON.parse(value); } } };
+  panel.corpus = FingerprintExplorer.prototype.read.call(panel);
+  assert.deepEqual(panel.corpus, [valid]); assert.deepEqual(panel.unreadableRecords, [invalid]);
+  assert.equal(FingerprintExplorer.prototype.write.call(panel), true);
+  assert.deepEqual(written, [valid, invalid]);
+});
+
+test("malformed audio library storage cannot be silently overwritten", () => {
+  let writes = 0;
+  for (const raw of ["invalid json", '{"unexpected":"object"}']) {
+    const panel = { storage: { getItem: () => raw, setItem() { writes++; } } };
+    panel.corpus = FingerprintExplorer.prototype.read.call(panel);
+    assert.deepEqual(panel.corpus, []); assert.equal(panel.storageReadFailed, true);
+    assert.equal(FingerprintExplorer.prototype.write.call(panel), false);
+  }
+  assert.equal(writes, 0);
+});
+
+test("malformed audio descriptors are excluded before comparison", () => {
+  assert.equal(usableAudioDescriptor({ version: "pairwise-evidence-audit-v1" }, { audited: true }), false);
+  const fp = deriveAudioFingerprint({ analysis: {}, harmony: {} });
+  assert.equal(usableAudioDescriptor(fp.auditDescriptor, { audited: true }), true);
+  assert.equal(usableAudioDescriptor(fp.descriptor), true);
+  assert.equal(usableAudioDescriptor({ ...fp.auditDescriptor, summary: { ...fp.auditDescriptor.summary, style: { chroma: "malformed" } } }, { audited: true }), false);
+});
+
+test("blocked localStorage property is a supported unavailable-storage state", () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
+  try { assert.equal(browserStorage(), null); }
+  finally { if (previous) Object.defineProperty(globalThis, "localStorage", previous); else delete globalThis.localStorage; }
+});
 
 test("fingerprint explorer derives bounded local-audio dimensions", () => {
   const frames=[

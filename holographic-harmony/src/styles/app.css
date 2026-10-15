@@ -257,3 +257,41 @@ select {
 .pairwise-mode select{max-width:100%;min-width:0;background:#0d1a2a;color:#dcecff;border:1px solid #29496c;border-radius:8px;padding:8px;font:inherit}
 .pairwise-warning{color:#e2bd83;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
 .pairwise-order{color:#b8d4f5;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+
+/* HHF-3.9.3 measured score comparison */
+.harmonic-savant-root>section[hidden]{display:none}
+.score-comparison-panel .timeline-title{margin:0;font-size:11px}
+.score-comparison-status{color:#e2bd83;font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin-bottom:8px}
+.score-comparison-status:empty{display:none}
+.score-comparison-copy{color:#9fb6d2;font-size:12px;line-height:1.55;margin:5px 0;overflow-wrap:anywhere}
+.score-comparison-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:16px}
+.score-comparison-controls .pairwise-mode{margin:0;min-width:0;flex-wrap:nowrap}
+.score-comparison-controls select{max-width:240px}
+.score-comparison-title{margin:0;color:#e5f1ff;font-size:16px;overflow-wrap:anywhere}
+.score-distance-table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}
+.score-distance-table th,.score-distance-table td{padding:7px 4px;border-bottom:1px solid #203b58;vertical-align:top}
+.score-distance-table thead{color:#7898bd;font-size:11px}
+.score-distance-table tbody th{font-weight:600;color:#b8d4f5}
+.score-distance-value{font-variant-numeric:tabular-nums;color:#e5f1ff}
+.score-evidence-cell{color:#8199b7;font-size:11px}
+.score-overlay>summary{cursor:pointer;color:#b8d4f5;font-size:12px;padding:5px 0}
+.score-overlay-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;margin-top:10px}
+.score-overlay-column{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 100px;gap:3px;min-width:0}
+.score-overlay-label{grid-column:1/3;color:#9fb6d2;font-size:9px;text-align:center}
+.score-overlay-meter{display:flex;align-items:flex-end;height:100px;background:#14263a}
+.score-overlay-meter span{display:block;width:100%;min-height:0}
+.score-overlay-current{background:#8ebeff}.score-overlay-saved{background:#e2bd83}
+@media(max-width:520px){.score-comparison-controls{display:grid;gap:10px}.score-comparison-controls select{max-width:100%;flex:1}.score-distance-table{font-size:11px}.score-evidence-cell{font-size:10px}.score-overlay-grid{gap:3px}}
+
+/* Additive HHF-3.9.4 external reference catalog */
+.reference-catalog{margin-top:24px;padding-top:18px;border-top:1px solid #29496c}
+.reference-catalog-controls{margin-bottom:14px;align-items:end}
+.reference-catalog-controls .pairwise-mode{display:grid;gap:5px;max-width:260px}
+.reference-catalog-controls input{min-width:0;max-width:100%;background:#0d1a2a;color:#dcecff;border:1px solid #29496c;border-radius:8px;padding:9px;font:inherit}
+.reference-catalog-controls select{width:100%;max-width:260px}
+.reference-catalog a,.score-comparison-card a{color:#9ecfff;text-underline-offset:3px}
+.reference-catalog-attribution{margin-top:14px;font-size:11px}
+.reference-result{border:1px solid #29496c;border-radius:12px;overflow:hidden;background:#091421}
+.reference-result>summary{cursor:pointer;padding:12px;color:#dcecff;font-size:13px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.reference-result .score-comparison-card{border:0;border-top:1px solid #203b58;border-radius:0}
+@media(max-width:520px){.reference-catalog-controls .pairwise-mode{max-width:none}.reference-catalog-controls select{max-width:100%}.reference-catalog-controls>button{width:100%}}

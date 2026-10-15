@@ -10,6 +10,8 @@ import { compareAudioToScore } from "../validation/audio-score-comparison.js";
 import { parseMusicXML } from "../music/musicxml.js";
 import { analyzeLocalAudioFile } from "../music/local-audio.js";
 import { pitchClassName } from "../theory/pitch.js";
+import { assertScoreHIR, harmonicStateAt } from "../model/harmonic-ir.js";
+import { createSongProgression, regionIndexAt } from "../model/song-progression.js";
 
 const LOCAL_TRACK_ID = "__local_music__";
 
@@ -26,6 +28,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.currentCollection = null;
     this.audioHarmony = null;
     this.scoreHarmony = null;
+    this.harmonicIR = null;
+    this.currentHarmonicState = null;
     this.audioReferenceScore = null;
     this.audioScoreComparison = null;
     this.harmonyRegionEls = [];
@@ -93,6 +97,14 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.currentCollection = null;
     this.audioHarmony = null;
     this.scoreHarmony = null;
+    this.harmonicIR = null;
+    this.currentHarmonicState = null;
+    this.scoreSourceId = null;
+    this.audioSourceId = null;
+    this.referenceLoadGeneration = (this.referenceLoadGeneration || 0) + 1;
+    if (this.referenceScoreButton) this.referenceScoreButton.disabled = false;
+    delete this.root.dataset.hirVersion;
+    delete this.root.dataset.harmonicStateVersion;
     this.audioReferenceScore = null;
     this.audioScoreComparison = null;
     this.harmonyRegionEls = [];
@@ -118,7 +130,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.sourceNote.textContent = `Analyzing ${file.name} locally. Pitch classes, chord boundaries, roots and qualities are inferred evidence.`;
 
     try {
-      const analysis = await analyzeLocalAudioFile(file);
+      const analysis = await analyzeLocalAudioFile(file, { signal: this.abortController?.signal });
       if (generation !== this.generation) return;
       const harmony = inferAudioHarmonySegments(analysis.frames, analysis.hopSeconds);
       if (generation !== this.generation) return;
@@ -130,6 +142,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       if (!partition.valid) throw new Error("Active/shadow partition failed Z12 invariant");
 
       this.audioHarmony = harmony;
+      this.audioSourceId = analysis.sourceId;
       this.localObjectUrl = URL.createObjectURL(file);
       this.currentTrack = Object.freeze({
         id: LOCAL_TRACK_ID,
@@ -177,16 +190,21 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     }
 
     const generation = this.generation;
+    const referenceGeneration = this.referenceLoadGeneration = (this.referenceLoadGeneration || 0) + 1;
+    const stale = () => generation !== this.generation || referenceGeneration !== this.referenceLoadGeneration;
     this.referenceScoreButton.disabled = true;
     this.referenceStatus.textContent = `Parsing ${file.name} locally and comparing timelines…`;
 
     try {
       const xml = await file.text();
-      if (generation !== this.generation) return;
+      if (stale()) return;
       const parsed = parseMusicXML(xml, globalThis.DOMParser, {
         trackId: `reference:${file.name}`
       });
-      if (generation !== this.generation) return;
+      if (stale()) return;
+      const hashBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()));
+      const hash = Array.from(hashBytes, byte => byte.toString(16).padStart(2, "0")).join("");
+      if (stale()) return;
       const scoreHarmony = inferScoreHarmony(parsed.notes);
       if (!scoreHarmony.regions.length) throw new Error("The reference score did not produce sounding sonority regions.");
       const comparison = compareAudioToScore(
@@ -194,14 +212,18 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
         scoreHarmony.regions,
         { microSegmentCount: this.audioHarmony.segmentCount }
       );
-      if (generation !== this.generation) return;
+      if (stale()) return;
 
       this.audioReferenceScore = scoreHarmony;
       this.audioScoreComparison = comparison;
       this.referenceStatus.textContent = `${file.name} · processed locally · nothing uploaded.`;
       this.renderAudioScoreComparison();
+      this.root.dispatchEvent(new CustomEvent("harmonic-savant:score-ready", {
+        bubbles: true,
+        detail: { title: file.name, events: parsed.eventsV1, sourceId: `sha256:${hash}`, sourceFormat: "musicxml", audioReference: true }
+      }));
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (stale()) return;
       console.error(error);
       this.audioReferenceScore = null;
       this.audioScoreComparison = null;
@@ -209,7 +231,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.referenceResults.innerHTML = "";
       this.referenceStatus.textContent = `Reference comparison failed: ${error.message}`;
     } finally {
-      if (generation === this.generation) this.referenceScoreButton.disabled = false;
+      if (!stale()) this.referenceScoreButton.disabled = false;
     }
   }
 
@@ -259,8 +281,10 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
   }
 
   async loadLocalScore(file) {
+    const generation = this.generation + 1;
     await super.loadLocalScore(file);
     if (
+      generation !== this.generation ||
       this.currentTrack?.id !== LOCAL_TRACK_ID ||
       this.currentTrack?.title !== file.name ||
       !this.notes?.length
@@ -320,6 +344,12 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     }
 
     this.harmonyCard.hidden = false;
+    this.root.dispatchEvent(new CustomEvent("harmonic-savant:song-progression-ready", {
+      bubbles: true,
+      detail: createSongProgression({ scoreHarmony: this.scoreHarmony, audioHarmony: this.audioHarmony,
+        sourceId: this.scoreSourceId || this.audioSourceId, title: this.currentTrack?.title,
+        generation: this.generation, duration: this.duration })
+    }));
     this.harmonyRegionEls = [];
     this.harmonySegmentEls = [];
 
@@ -330,7 +360,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.referenceControls.hidden = true;
       this.renderTimelineButtons(scoreRegions, this.harmonyTrack, this.harmonyRegionEls, {
         kind: "score-region",
-        seekable: false
+        seekable: true
       });
       this.harmonySummary.textContent = `${scoreRegions.length} score sonority regions · pitch sets and lowest sounding MIDI are measured · chord/root/function labels are inferred.`;
       return;
@@ -365,14 +395,14 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     if (!this.harmonyCard) return;
     if (this.scoreHarmony?.regions?.length) {
       const regions = this.scoreHarmony.regions;
-      let region = regions.find((item) => timeSeconds >= item.onset && timeSeconds < item.end);
-      if (!region) region = timeSeconds >= regions.at(-1).end ? regions.at(-1) : regions[0];
+      const region = regions[regionIndexAt(regions, timeSeconds)];
+      if (!region) return this.renderSilentHarmony();
       for (let index = 0; index < this.harmonyRegionEls.length; index += 1) {
         this.harmonyRegionEls[index].classList.toggle("is-current", index === region.index);
       }
       this.harmonyCurrent.textContent = region.symbol || "—";
-      const functionCandidate = this.scoreHarmony.harmonicAnalysis
-        ?.contextualFunction?.hypotheses?.[0]?.functions?.[region.index]?.candidates?.[0] || null;
+      const functionCandidate = this.harmonicIR?.harmonicObjects.contextualFunction.hypotheses[0]?.functions[region.index]?.candidates[0] ?? this.scoreHarmony.harmonicAnalysis
+        ?.contextualFunction?.hypotheses?.[0]?.functions?.[region.index]?.candidates?.[0] ?? null;
       this.harmonyFunction.textContent = functionCandidate
         ? `${functionCandidate.roman} · ${functionCandidate.nashville} · ${functionCandidate.role} · inferred interpretation of measured score notes`
         : "Measured sonority retained · no stable functional reading";
@@ -387,8 +417,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       ? this.audioHarmony.regions
       : this.audioHarmony?.segments;
     if (!regions?.length) return;
-    let region = regions.find((item) => timeSeconds >= item.onset && timeSeconds < item.end);
-    if (!region) region = timeSeconds >= regions.at(-1).end ? regions.at(-1) : regions[0];
+    const region = regions[regionIndexAt(regions, timeSeconds)];
+    if (!region) return this.renderSilentHarmony();
     for (let index = 0; index < this.harmonyRegionEls.length; index += 1) {
       this.harmonyRegionEls[index].classList.toggle("is-current", index === region.index);
     }
@@ -417,7 +447,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     if (!force && Math.abs(timeSeconds - this.lastRenderTime) < 1 / 45) return;
     this.lastRenderTime = timeSeconds;
 
-    const activity = computePitchClassActivity(this.notes, timeSeconds, this.currentTrack.analysis?.activity);
+    let activity = computePitchClassActivity(this.notes, timeSeconds, this.currentTrack.analysis?.activity);
     let activeField = this.activeField;
     let currentFieldLabel = this.currentTrack.analysis?.field?.name || "Defined field";
     let candidates = inferScaleCandidates(activity.raw, 4);
@@ -444,15 +474,26 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.primaryDiagnosticLabel.textContent = "CURRENT FIELD";
     }
 
-    const shadowField = complementField(activeField);
-    const admissions = computeAdmissionHistory(this.notes, shadowField, timeSeconds);
+    let shadowField = complementField(activeField);
+    let admissions = computeAdmissionHistory(this.notes, shadowField, timeSeconds);
     const latentCenter = this.currentTrack.analysis?.latentCenter;
-    const crystallization = crystallizationSupport({
+    let crystallization = crystallizationSupport({
       activityNormalized: activity.normalized,
       shadowField,
       admittedPcs: admissions.admittedPcs,
       latentCenter
     });
+
+    if (this.harmonicIR) {
+      const state = harmonicStateAt(this.harmonicIR, timeSeconds, { activeField, activity, admissionHistory: admissions,
+        scaleCandidates: candidates, crystallization });
+      this.currentHarmonicState = state;
+      this.root.dataset.harmonicStateVersion = state.schemaVersion;
+      activeField = state.deterministic.activeField; shadowField = state.deterministic.shadowField;
+      admissions = state.holographic.admissionHistory; candidates = state.inferred.scaleCandidates;
+      crystallization = state.inferred.crystallizationCandidates[0] ?? null;
+      activity = { ...activity, raw: state.measured.pitchClassActivity };
+    }
 
     const circleLabel = adaptive ? currentFieldLabel.replace(/ collection$/i, "") : currentFieldLabel;
     this.pitchCircle.update({
@@ -514,5 +555,26 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.seek.value = String(Math.round(1000 * Math.min(1, this.duration ? timeSeconds / this.duration : 0)));
     this.timeline.update({ duration: this.duration || 1, time: timeSeconds, admissions: admissions.ordered });
     this.renderHarmonicAt(timeSeconds);
+    this.root.dispatchEvent(new CustomEvent("harmonic-savant:playback-position", {
+      bubbles: true, detail: { timeSeconds, generation: this.generation }
+    }));
+  }
+
+  renderSilentHarmony() {
+    for (const button of [...this.harmonyRegionEls, ...this.harmonySegmentEls]) button.classList.toggle("is-current", false);
+    this.harmonyCurrent.textContent = "No sounding chord";
+    this.harmonyFunction.textContent = "Silence or a gap in the analyzed regions.";
+    this.harmonyAlternatives.textContent = "";
+  }
+
+  acceptHarmonicIR(hir) {
+    assertScoreHIR(hir);
+    if (!this.currentTrack || hir.source.id !== this.scoreSourceId) return false;
+    this.harmonicIR = hir;
+    this.scoreHarmony = hir.scoreHarmony;
+    this.root.dataset.hirVersion = hir.schemaVersion;
+    this.renderHarmonicTimeline();
+    this.renderAt(Math.max(0, this.lastRenderTime || 0), true);
+    return true;
   }
 }

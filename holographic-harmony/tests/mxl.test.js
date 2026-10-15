@@ -31,3 +31,22 @@ test("MXL extractor follows container.xml to a deflated MusicXML root", async ()
   assert.equal(extracted.xmlText,score);
   assert.equal(extracted.entryCount,2);
 });
+
+test("MXL rejects forged expansion sizes before accumulating an oversized score", async () => {
+  const score = `<score-partwise>${" ".repeat(50000)}</score-partwise>`;
+  const archive = zip([{ name: "score.musicxml", text: score, deflate: true }]);
+  const view = new DataView(archive.buffer);
+  const central = view.getUint32(archive.length - 6, true);
+  view.setUint32(central + 24, 32, true);
+  await assert.rejects(extractMusicXmlFromMxl(archive), /exceeds.*declared size/);
+});
+
+test("MXL validates stored entry sizes, header bounds and finite resource limits", async () => {
+  const original = zip([{ name: "score.musicxml", text: "<score-partwise/>" }]);
+  const central = new DataView(original.buffer).getUint32(original.length - 6, true);
+  const badSize = original.slice(); new DataView(badSize.buffer).setUint32(central + 24, 1, true);
+  await assert.rejects(extractMusicXmlFromMxl(badSize), /size does not match/);
+  const badOffset = original.slice(); new DataView(badOffset.buffer).setUint32(central + 42, original.length - 2, true);
+  await assert.rejects(extractMusicXmlFromMxl(badOffset), /Invalid MXL local file header/);
+  await assert.rejects(extractMusicXmlFromMxl(original, { maxUncompressedBytes: NaN }), /finite/);
+});

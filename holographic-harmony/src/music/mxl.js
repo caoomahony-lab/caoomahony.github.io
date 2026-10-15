@@ -10,26 +10,46 @@ function findEocd(view) {
   }
   throw new Error("Invalid MXL/ZIP: end-of-central-directory record not found");
 }
-async function inflateRaw(bytes) {
+async function inflateRaw(bytes, limit) {
   if (typeof DecompressionStream !== "function") throw new Error("This browser cannot decompress deflated MXL files");
   let stream;
   try { stream = new DecompressionStream("deflate-raw"); }
   catch { throw new Error("This browser does not support raw DEFLATE required by this MXL file"); }
-  const response = new Response(new Blob([bytes]).stream().pipeThrough(stream));
-  return new Uint8Array(await response.arrayBuffer());
+  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) throw new Error("MXL expanded entry exceeds its declared size or the local safety limit");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  const result = new Uint8Array(size);
+  let cursor = 0;
+  for (const chunk of chunks) { result.set(chunk, cursor); cursor += chunk.length; }
+  return result;
 }
 async function extractEntry(bytes, view, entry) {
   const offset = entry.localHeaderOffset;
-  if (view.getUint32(offset, true) !== LOCAL_FILE) throw new Error("Invalid MXL local file header");
+  if (offset + 30 > bytes.length || view.getUint32(offset, true) !== LOCAL_FILE) throw new Error("Invalid MXL local file header");
   const nameLength = view.getUint16(offset + 26, true);
   const extraLength = view.getUint16(offset + 28, true);
   const dataStart = offset + 30 + nameLength + extraLength;
   const dataEnd = dataStart + entry.compressedSize;
   if (dataEnd > bytes.length) throw new Error("Truncated MXL entry");
   const compressed = bytes.slice(dataStart, dataEnd);
-  if (entry.method === 0) return compressed;
-  if (entry.method === 8) return inflateRaw(compressed);
-  throw new Error(`Unsupported MXL compression method ${entry.method}`);
+  let expanded;
+  if (entry.method === 0) expanded = compressed;
+  else if (entry.method === 8) expanded = await inflateRaw(compressed, entry.uncompressedSize);
+  else throw new Error(`Unsupported MXL compression method ${entry.method}`);
+  if (expanded.length !== entry.uncompressedSize) throw new Error("MXL expanded entry size does not match its ZIP directory");
+  return expanded;
 }
 
 export async function extractMusicXmlFromMxl(arrayBuffer, options = {}) {
@@ -41,6 +61,7 @@ export async function extractMusicXmlFromMxl(arrayBuffer, options = {}) {
   const centralOffset = view.getUint32(eocd + 16, true);
   const maxEntries = Math.max(1, Number(options.maxEntries ?? 256));
   const maxUncompressedBytes = Math.max(1024, Number(options.maxUncompressedBytes ?? 32 * 1024 * 1024));
+  if (!Number.isFinite(maxEntries) || !Number.isFinite(maxUncompressedBytes)) throw new TypeError("MXL limits must be finite numbers");
   if (entryCount > maxEntries) throw new Error("MXL contains too many ZIP entries");
 
   const decoder = new TextDecoder();
@@ -59,6 +80,7 @@ export async function extractMusicXmlFromMxl(arrayBuffer, options = {}) {
     if (flags & 0x1) throw new Error("Encrypted MXL files are not supported");
     if (uncompressedSize > maxUncompressedBytes) throw new Error("MXL entry exceeds the local safety limit");
     const nameStart = cursor + 46;
+    if (nameStart + nameLength + extraLength + commentLength > bytes.length) throw new Error("Truncated MXL central directory entry");
     const name = decoder.decode(bytes.slice(nameStart, nameStart + nameLength));
     entries.push({ name, flags, method, compressedSize, uncompressedSize, localHeaderOffset });
     cursor = nameStart + nameLength + extraLength + commentLength;

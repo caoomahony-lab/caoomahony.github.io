@@ -119,9 +119,11 @@ export class HolographicHarmonyApp {
     const transport = create("section", "transport");
     this.playButton = create("button", "play-button", "▶");
     this.playButton.type = "button";
+    this.playButton.setAttribute("aria-label", "Play");
     this.timeEl = create("div", "time-readout", "0:00 / 0:00");
     this.seek = document.createElement("input");
     this.seek.type = "range";
+    this.seek.setAttribute("aria-label", "Playback position");
     this.seek.min = "0";
     this.seek.max = "1000";
     this.seek.value = "0";
@@ -163,7 +165,13 @@ export class HolographicHarmonyApp {
     this.playButton.addEventListener("click", async () => {
       if (!this.currentTrack || this.playButton.disabled) return;
       if (this.audio.paused) {
-        await this.audio.play();
+        const generation = this.generation;
+        try { await this.audio.play(); }
+        catch (error) {
+          if (generation !== this.generation) return;
+          this.status.textContent = "PLAYBACK UNAVAILABLE";
+          this.sourceNote.textContent = `Playback could not start: ${error.message}. You can still explore the chord timeline.`;
+        }
       } else {
         this.audio.pause();
       }
@@ -174,15 +182,18 @@ export class HolographicHarmonyApp {
     });
     this.audio.addEventListener("play", () => {
       this.playButton.textContent = "❚❚";
+      this.playButton.setAttribute("aria-label", "Pause");
       this.startAnimation();
     });
     this.audio.addEventListener("pause", () => {
       this.playButton.textContent = "▶";
+      this.playButton.setAttribute("aria-label", "Play");
       this.stopAnimation();
       this.renderAt(this.scoreTime(), true);
     });
     this.audio.addEventListener("ended", () => {
       this.playButton.textContent = "▶";
+      this.playButton.setAttribute("aria-label", "Play");
       this.stopAnimation();
       this.renderAt(this.duration, true);
     });
@@ -251,13 +262,15 @@ export class HolographicHarmonyApp {
     this.abortController = new AbortController();
     this.status.textContent = status;
     this.currentTrack = null;
+    this.scoreSourceId = null;
     this.notes = [];
     this.activeField = [];
     this.shadowField = [];
     this.duration = 0;
-    this.playButton.disabled = false;
+    this.playButton.disabled = true;
     this.clearScoreExport();
     this.resetDiagnostics();
+    this.root.dispatchEvent(new CustomEvent("harmonic-savant:source-loading", { bubbles: true }));
     return generation;
   }
 
@@ -294,10 +307,12 @@ export class HolographicHarmonyApp {
       this.audio.currentTime = 0;
       this.audio.load();
       this.duration = Math.max(parsed.durationSeconds, Number(track.durationHint || 0));
+      this.playButton.disabled = false;
       this.status.textContent = "READY";
       this.renderAt(0, true);
+      this.publishScoreFingerprint(parsed.eventsV1, { title: track.title, sourceId: `demo:${track.id}`, sourceFormat: "musicxml" });
     } catch (error) {
-      if (error?.name === "AbortError") return;
+      if (generation !== this.generation || error?.name === "AbortError") return;
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
@@ -306,13 +321,10 @@ export class HolographicHarmonyApp {
 
   async loadLocalFile(file) {
     const kind = classifyLocalMusicFile(file);
-    this.ensureLocalOption(file.name || "untitled");
     if (kind === "audio") return this.loadLocalAudio(file);
     if (kind === "musicxml" || kind === "mxl" || kind === "midi") return this.loadLocalScore(file);
     const error = new Error("Unsupported local file. Choose browser-decodable audio, .musicxml/.xml, .mxl, .mid, or .midi.");
-    this.status.textContent = "ERROR";
-    this.fieldEl.textContent = error.message;
-    this.sourceNote.textContent = error.message;
+    this.sourceNote.textContent = `${error.message}${this.currentTrack ? " The current piece remains loaded." : ""}`;
     return null;
   }
 
@@ -324,7 +336,7 @@ export class HolographicHarmonyApp {
     this.sourceNote.textContent = `Analyzing ${file.name} locally. Audio-derived pitch classes are inferred evidence, not score transcription.`;
 
     try {
-      const analysis = await analyzeLocalAudioFile(file);
+      const analysis = await analyzeLocalAudioFile(file, { signal: this.abortController?.signal });
       if (generation !== this.generation) return;
       const overallCandidate = inferScaleCandidates(analysis.overallChroma, 1)[0];
       this.notes = [...analysis.events];
@@ -379,6 +391,9 @@ export class HolographicHarmonyApp {
         trackId: `local:${file.name}`
       });
       if (generation !== this.generation) return;
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+      if (generation !== this.generation) return;
+      const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
       const parsed = prepared.parsed;
       this.notes = [...parsed.notes];
       const initialActivity = computePitchClassActivity(this.notes, Math.min(8, parsed.durationSeconds));
@@ -415,6 +430,7 @@ export class HolographicHarmonyApp {
         : "Score note content is measured from MusicXML; tonal context remains interpretive.";
       this.sourceNote.textContent = `${file.name} · ${parsed.notes.length} note events processed locally · ${prepared.sourceFormat.toUpperCase()} → MusicXML ready. ${evidenceText} Playback requires audio.`;
       this.renderAt(0, true);
+      this.publishScoreFingerprint(parsed.eventsV1, { title: file.name, sourceId: `sha256:${hash}`, sourceFormat: prepared.sourceFormat });
     } catch (error) {
       if (generation !== this.generation) return;
       console.error(error);
@@ -436,6 +452,15 @@ export class HolographicHarmonyApp {
     this.seek.value = "0";
     this.timeEl.textContent = "0:00 / 0:00";
     this.timeline?.update({ duration: 1, time: 0, admissions: [] });
+  }
+
+  publishScoreFingerprint(events, { title, sourceId, sourceFormat }) {
+    this.scoreSourceId = sourceId;
+    this.root.dispatchEvent(new CustomEvent("harmonic-savant:score-ready", {
+      bubbles: true, detail: { events, title, sourceId, sourceFormat,
+        analysisOptions: { referenceCenterPc: this.currentTrack?.analysis?.field?.center ?? null,
+          referenceField: this.currentTrack?.analysis?.field?.pcs ?? null } }
+    }));
   }
 
   seekTo(seconds) {
