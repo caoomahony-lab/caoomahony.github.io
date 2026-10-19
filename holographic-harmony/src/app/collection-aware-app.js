@@ -174,8 +174,10 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       }));
       this.renderHarmonicTimeline();
       this.renderAt(0, true);
+      this.commitLoadSession(file);
     } catch (error) {
       if (generation !== this.generation) return;
+      if (this.recoverLoadFailure(error, generation)) return;
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
@@ -282,13 +284,14 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
 
   async loadLocalScore(file) {
     const generation = this.generation + 1;
+    this.deferScoreCommitGeneration = generation;
     await super.loadLocalScore(file);
     if (
       generation !== this.generation ||
       this.currentTrack?.id !== LOCAL_TRACK_ID ||
       this.currentTrack?.title !== file.name ||
       !this.notes?.length
-    ) return;
+    ) { if(this.deferScoreCommitGeneration===generation)this.deferScoreCommitGeneration=null; return; }
 
     try {
       this.scoreHarmony = inferScoreHarmony(this.notes);
@@ -299,12 +302,21 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       this.sourceNote.textContent = `${file.name} · ${this.notes.length} note events · ${this.scoreHarmony.regionCount} sonority regions · ${sourceMeaning}. MusicXML export is ready. Playback requires audio.`;
       this.renderHarmonicTimeline();
       this.renderHarmonicAt(0);
+      super.commitLoadSession(file);
     } catch (error) {
+      if(this.recoverLoadFailure(error,generation))return;
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
       this.sourceNote.textContent = error.message;
+    } finally {
+      if(this.deferScoreCommitGeneration===generation)this.deferScoreCommitGeneration=null;
     }
+  }
+
+  commitLoadSession(file = null) {
+    if(this.deferScoreCommitGeneration===this.generation)return;
+    super.commitLoadSession(file);
   }
 
   renderTimelineButtons(items, target, elementList, { kind, seekable }) {

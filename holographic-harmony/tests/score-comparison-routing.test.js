@@ -14,6 +14,8 @@ function appStub() {
   const app = { received, generation: 0, root: { dispatchEvent: event => received.push(event) },
     beginLoad() { return ++this.generation; }, releaseLocalObjectUrl() {}, ensureLocalOption() {}, setScoreExport() {}, clearScoreExport() {}, renderAt() {},
     publishScoreFingerprint: HolographicHarmonyApp.prototype.publishScoreFingerprint,
+    commitLoadSession: HolographicHarmonyApp.prototype.commitLoadSession,
+    recoverLoadFailure: HolographicHarmonyApp.prototype.recoverLoadFailure,
     audio: { removeAttribute() {}, load() {} }, sourceNote: {}, status: {}, fieldEl: {}, modeBadge: {}, playButton: {} };
   return app;
 }

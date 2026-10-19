@@ -3,6 +3,7 @@ import { SongContinuationPanel } from "./song-continuation-panel.js";
 import { complementField } from "../theory/fields.js";
 import { FingerprintExplorer } from "./fingerprint-explorer.js";
 import { ScoreComparisonPanel } from "./score-comparison-panel.js";
+import { workspaceBackupPanel } from "./workspace-backup-panel.js";
 
 export class HarmonicSavantApp {
   constructor(root, tracks) {
@@ -21,17 +22,23 @@ export class HarmonicSavantApp {
     this.root.append(this.visualizerRoot, this.scoreExplorerRoot, this.explorerRoot, this.continuationRoot);
 
     this.visualizer = new CollectionAwareHolographicHarmonyApp(this.visualizerRoot, tracks);
+    this.visualizer.onLoadCommitted = () => { this.panelRecovery = null; };
     this.explorer = new FingerprintExplorer(this.explorerRoot);
     this.scoreExplorer = new ScoreComparisonPanel(this.scoreExplorerRoot, {
       onAnalysisReady: hir => this.visualizer.acceptHarmonicIR(hir)
     });
     this.explorerRoot.hidden = true;
-    this.root.addEventListener("harmonic-savant:source-loading", () => {
-      this.scoreExplorer.invalidate(); this.explorer.current = null; this.explorer.render();
-      this.continuation?.invalidate();
-      this.explorerRoot.hidden = true; this.scoreExplorerRoot.hidden = false;
+    this.root.addEventListener("harmonic-savant:source-loading", () => this.handleSourceLoading());
+    this.root.addEventListener("harmonic-savant:source-restored", () => {
+      const saved = this.panelRecovery; if (!saved) return;
+      this.panelRecovery = null;
+      this.sourceEvidence = saved.evidence;
+      this.scoreExplorer.current = saved.current; this.scoreExplorer.analysis = saved.analysis; this.scoreExplorer.audioTitle = saved.audioTitle;
+      this.scoreExplorer.renderCurrent(); this.scoreExplorer.renderComparisons();
+      this.explorer.current = saved.audio; this.explorerRoot.hidden = !saved.audio; this.explorer.render();
     });
     this.root.addEventListener("harmonic-savant:score-ready", (event) => {
+      if (!event.detail.audioReference) this.sourceEvidence = event.detail;
       if (event.detail.audioReference) this.scoreExplorer.setAudioSource({ title: this.visualizer.currentTrack?.title });
       else this.explorerRoot.hidden = true;
       this.scoreExplorer.accept(event.detail);
@@ -41,6 +48,8 @@ export class HarmonicSavantApp {
       this.explorerRoot.hidden = false; this.explorer.accept(event.detail);
     });
     this.continuation = new SongContinuationPanel(this.continuationRoot, {
+      getSourceEvidence: () => this.sourceEvidence,
+      onAuditionStart: () => { this.visualizer.audio.pause(); this.visualizer.stopAnimation(); },
       getHolographicContext: (region, song) => this.currentHolographicContext(region, song),
       onSeek: time => this.visualizer.seekTo(time),
       getScoreVoicing: region => {
@@ -53,6 +62,7 @@ export class HarmonicSavantApp {
     });
     this.root.addEventListener("harmonic-savant:song-progression-ready", event => this.continuation.acceptSong(event.detail, Math.max(0, this.visualizer.lastRenderTime || 0)));
     this.root.addEventListener("harmonic-savant:playback-position", event => this.continuation.followTime(event.detail));
+    this.root.append(workspaceBackupPanel(() => { this.scoreExplorer.corpus = this.scoreExplorer.read(); this.scoreExplorer.renderCurrent(); this.scoreExplorer.renderComparisons(); }));
   }
 
   currentHolographicContext(region = null, song = null) {
@@ -67,6 +77,16 @@ export class HarmonicSavantApp {
       activeField,
       shadowField: Object.freeze(complementField(activeField))
     });
+  }
+
+  handleSourceLoading() {
+    const track=this.visualizer.loadSession?.state.currentTrack;
+    if (track && this.panelRecovery?.track !== track) this.panelRecovery = { track, current: this.scoreExplorer.current, analysis: this.scoreExplorer.analysis,
+      audioTitle: this.scoreExplorer.audioTitle, audio: this.explorer.current, evidence: this.sourceEvidence };
+    this.sourceEvidence = null;
+    this.scoreExplorer.invalidate(); this.explorer.current = null; this.explorer.render();
+    this.continuation?.invalidate();
+    this.explorerRoot.hidden = true; this.scoreExplorerRoot.hidden = false;
   }
 
   async initialize() {

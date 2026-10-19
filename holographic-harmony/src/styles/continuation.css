@@ -294,3 +294,20 @@
 @media(max-width:600px){.hs-song-controls{padding:11px}.hs-song-controls .hs-field{min-width:0}.hs-feeling-controls .hs-secondary{width:100%;min-height:44px}.hs-song-chord-list button{min-height:44px}.hs-function-table{overflow-x:auto}}
 .hs-continuation-panel [hidden]{display:none!important}
 .hs-continuation-panel :is(input,select,textarea,button,summary,a):focus-visible{outline:2px solid #aacfff;outline-offset:3px}
+
+/* Composition laboratory: readable evidence, bounded diagnostics and touch controls. */
+.composition-workbench{min-width:0;display:grid;gap:12px;border-top:1px solid #29476a;padding-top:14px}
+.composition-workbench h3{margin:0;color:#e2eeff;font-size:18px}
+.composition-workbench p{margin:5px 0;line-height:1.55;overflow-wrap:anywhere}
+.composition-summary{border-left:3px solid #7fa8d8;padding:8px 12px;background:#0e2135;color:#b7cce6;font-size:13px}
+.composition-scope{color:#d0e2fa;font-size:13px;line-height:1.55}
+.composition-search-results,.composition-semantic-results{max-height:440px;overflow:auto;min-width:0}
+.composition-match{padding:12px;border:1px solid #2e4c70;border-radius:10px;margin:8px 0}
+.composition-match pre{font-size:12px;max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.composition-workbench .hs-secondary,.workspace-backup button,.hs-continuation-row>.hs-secondary{min-height:44px}
+.composition-candidate-evidence{margin:8px 0}.composition-candidate-evidence summary{cursor:pointer;color:#bedbff;font-size:13px;min-height:32px;padding:6px 0}
+.hs-continuation-panel .hs-small-note,.hs-continuation-panel .hs-candidate-explanation,.hs-continuation-panel .hs-best-voicing,.hs-compose-subtitle,.hs-advanced>summary{font-size:12px;line-height:1.55}
+.workspace-backup{width:min(1180px,calc(100% - 28px));margin:0 auto 28px;box-sizing:border-box;padding:16px;color:#bed2ec;overflow-wrap:anywhere}
+.workspace-backup button{margin:5px;padding:10px;border:1px solid #456587;background:#13243a;color:#e5f0ff;border-radius:8px}
+.hs-third-step{padding:8px 0 0 12px}.hs-branch-item>.hs-secondary{margin-top:8px;min-height:44px}
+@media(max-width:600px){.composition-workbench select,.composition-workbench input,.hs-feeling-controls input{font-size:16px;min-height:44px}.composition-workbench .hs-actions{display:grid;grid-template-columns:1fr}.composition-workbench .hs-actions button{width:100%}.hs-song-controls{padding:10px}.workspace-backup{width:calc(100% - 18px)}.hs-compose-subtitle{font-size:12px}.hs-continuation-panel .hs-field-label{font-size:12px}}

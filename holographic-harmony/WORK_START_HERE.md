@@ -11,6 +11,10 @@ Read these in order:
 
 If a work ticket, deployment convenience, framework limitation, or implementation preference conflicts with `PROJECT_CONSTITUTION.md`, stop and report the conflict. Do not silently shrink the goal.
 
+## Current acceptance status
+
+Read `REQUIREMENTS_LEDGER.md` for the current HHF-3.11 composition-laboratory checkpoint, tests, acceptance scope and remaining product requirements. It connects experimental composition intentions, prefix-only context, passage comparison/search, constrained generated audition, functional translation, portable reports and safe workspace backup. Import failure recovery preserves the previous usable song. This is not the completed product; the ledger keeps the wider constitution goals open. Older checkpoint reports below are historical evidence.
+
 ## Latest similarity validation checkpoint
 
 The song-linked workbench and reliability audit are described in

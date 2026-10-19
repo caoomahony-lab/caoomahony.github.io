@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import { createPassage,buildCompositionContext } from '../src/analysis/composition-context.js';
+import { compositionReport,compositionCSV,compositionMarkdown } from '../src/analysis/composition-export.js';
+import { readPassageLibrary,savePassage,PASSAGE_LIBRARY_KEY } from '../src/model/passage-library.js';
+import { generatedAuditionVoicing } from '../src/playback/audition.js';
+const song={sourceId:'=unsafe-spreadsheet-title',title:'Fixture',version:'song-progression-v1',evidenceClass:'measured-notes-inferred-chords',regions:[{onset:0,end:1,pcs:[0,4,7],rootPc:0,templateId:'major',symbol:'C'},{onset:1,end:2,pcs:[7,11,2],rootPc:7,templateId:'major',symbol:'G'}]};
+const storage=()=>{const m=new Map();return {m,getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
+test('passage JSON, CSV and report retain exact source/interval and prevent spreadsheet formulas',()=>{const r=compositionReport(song,0,1,{context:buildCompositionContext(song,1,{startIndex:0})});assert.equal(r.passage.end,2);assert.equal(JSON.parse(JSON.stringify(r)).source.id,song.sourceId);assert.match(compositionCSV(r),/"'=unsafe/);assert.match(compositionMarkdown(r),/Compose|compose-forward/);assert.equal(song.regions[0].symbol,'C');});
+test('stale context cannot be attached to a different exported interval',()=>{assert.throws(()=>compositionReport(song,1,1,{context:buildCompositionContext(song,0)}),/stale/);});
+test('saved passages round trip and unreadable prior records prevent overwrites',()=>{const s=storage(),p=createPassage(song,0,1);savePassage(s,p);assert.deepEqual(readPassageLibrary(s)[0].passage,p);s.setItem(PASSAGE_LIBRARY_KEY,'[{"future":1}]');assert.throws(()=>savePassage(s,p));assert.equal(s.getItem(PASSAGE_LIBRARY_KEY),'[{"future":1}]');});
+test('generated audition always respects declared register and rejects impossible or noninteger notes',()=>{assert.deepEqual(generatedAuditionVoicing({pitchClasses:[0,4,7]},null,{midiRange:[60,72]}),[60,64,67]);assert.throws(()=>generatedAuditionVoicing({pitchClasses:[0,4,7]},null,{midiRange:[60,62]}),/No legal/);assert.throws(()=>generatedAuditionVoicing({},[60.2],{midiRange:[48,84]}));assert.throws(()=>generatedAuditionVoicing({},[90],{midiRange:[48,84]}));});

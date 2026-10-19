@@ -16,9 +16,11 @@ export function classifyScoreFile(file){
 function exportFileName(name){ return String(name||"score").replace(/\.(mxl|musicxml|xml|mid|midi)$/i,"")+".musicxml"; }
 
 export async function prepareLocalScoreFile(file, DOMParserImpl=globalThis.DOMParser, options={}){
+  if(Number(file?.size)>32*1024*1024)throw new RangeError("Score file exceeds the32MiB local input limit");
   const kind=classifyScoreFile(file), trackId=String(options.trackId||`local:${file?.name||"score"}`);
   if(kind==="musicxml"){
     const xmlText=await file.text();
+    if(new TextEncoder().encode(xmlText).length>12*1024*1024)throw new RangeError("MusicXML exceeds the12MiB expanded text limit");
     const parsed=parseMusicXML(xmlText,DOMParserImpl,{trackId});
     const normalizedXml=serializeParsedScoreToMusicXML({...parsed,sourceFormat:"musicxml",evidenceClass:"measured-from-score"},{title:file.name,sourceFormat:"musicxml",evidenceClass:"measured-from-score"});
     return Object.freeze({version:SCORE_IO_VERSION,sourceFormat:"musicxml",evidenceClass:"measured-from-score",parsed,exportXml:xmlText,normalizedXml,exportFilename:exportFileName(file.name),exportLabel:"Save MusicXML",exportSemantics:"original-musicxml",note:"MusicXML note content is read locally. The original XML is preserved for export; normalized analysis XML is available internally."});

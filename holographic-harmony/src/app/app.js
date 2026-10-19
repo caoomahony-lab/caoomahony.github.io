@@ -216,8 +216,51 @@ export class HolographicHarmonyApp {
 
   releaseLocalObjectUrl() {
     if (!this.localObjectUrl) return;
-    URL.revokeObjectURL(this.localObjectUrl);
+    if (this.localObjectUrl !== this.loadSession?.state.localObjectUrl) URL.revokeObjectURL(this.localObjectUrl);
     this.localObjectUrl = null;
+  }
+
+  captureLoadSession() {
+    if (!this.currentTrack || !this.notes?.length) return null;
+    const keys = ["currentTrack", "notes", "activeField", "shadowField", "duration", "localObjectUrl", "scoreExport", "scoreSourceId",
+      "audioSourceId", "currentCollection", "audioHarmony", "scoreHarmony", "harmonicIR", "currentHarmonicState", "audioReferenceScore", "audioScoreComparison", "currentLocalFile"];
+    return { state: Object.fromEntries(keys.map(key => [key, this[key]])), time: Math.max(0, this.lastRenderTime ?? this.audio.currentTime ?? 0),
+      audioSrc: this.currentTrack.audio || "", playDisabled: this.playButton.disabled,
+      sourceText: this.sourceNote.textContent, modeText: this.modeBadge.textContent, converterText: this.converterStatus?.textContent };
+  }
+
+  commitLoadSession(file = null) {
+    const previousUrl = this.loadSession?.state.localObjectUrl;
+    if (previousUrl && previousUrl !== this.localObjectUrl) URL.revokeObjectURL(previousUrl);
+    this.loadSession = null; this.currentLocalFile = file;
+    this.onLoadCommitted?.();
+  }
+
+  recoverLoadFailure(error, generation) {
+    if (generation !== this.generation || !this.loadSession) return false;
+    const saved = this.loadSession; this.loadSession = null;
+    if (this.localObjectUrl && this.localObjectUrl !== saved.state.localObjectUrl) URL.revokeObjectURL(this.localObjectUrl);
+    Object.assign(this, saved.state);
+    this.localFile = this.currentLocalFile;
+    this.audio.pause();
+    if (saved.audioSrc) this.audio.src = saved.audioSrc; else this.audio.removeAttribute?.("src");
+    this.audio.load();
+    const restoreTime = () => { if (generation === this.generation && this.currentTrack === saved.state.currentTrack && saved.audioSrc) this.audio.currentTime = saved.time + Number(this.currentTrack.audioOffset || 0); };
+    this.audio.addEventListener?.("loadedmetadata", restoreTime, { once: true });
+    try { restoreTime(); } catch { /* Metadata handler restores the time once the recording is ready. */ }
+    this.playButton.disabled = saved.playDisabled;
+    this.trackSelect.value = this.currentTrack.id;
+    if (this.currentTrack.local) this.ensureLocalOption?.(this.currentTrack.title);
+    else if (!this.localFile) this.trackSelect.querySelector?.(`option[value="${LOCAL_TRACK_ID}"]`)?.remove();
+    this.modeBadge.textContent = saved.modeText;
+    this.lastRenderTime = saved.time;
+    this.exportMusicXmlButton.disabled = !this.scoreExport?.xml;
+    if (this.converterStatus) this.converterStatus.textContent = saved.converterText || "";
+    this.status.textContent = "READY · PREVIOUS SONG";
+    this.sourceNote.textContent = `Import failed: ${error.message}. The previous song is restored and paused. ${saved.sourceText}`;
+    this.root.dispatchEvent(new CustomEvent("harmonic-savant:source-restored", { bubbles: true }));
+    this.renderHarmonicTimeline?.(); this.renderAt(saved.time, true);
+    return true;
   }
 
   clearScoreExport(message = "Open .mxl, .mid/.midi, .musicxml, or .xml to enable local MusicXML export. Audio → MusicXML is intentionally unavailable until registered-note transcription is reliable.") {
@@ -255,6 +298,7 @@ export class HolographicHarmonyApp {
   }
 
   beginLoad(status = "LOADING") {
+    this.loadSession = this.captureLoadSession() || this.loadSession;
     const generation = ++this.generation;
     this.stopAnimation();
     this.audio.pause();
@@ -267,6 +311,7 @@ export class HolographicHarmonyApp {
     this.activeField = [];
     this.shadowField = [];
     this.duration = 0;
+    this.lastRenderTime = -1;
     this.playButton.disabled = true;
     this.clearScoreExport();
     this.resetDiagnostics();
@@ -311,8 +356,10 @@ export class HolographicHarmonyApp {
       this.status.textContent = "READY";
       this.renderAt(0, true);
       this.publishScoreFingerprint(parsed.eventsV1, { title: track.title, sourceId: `demo:${track.id}`, sourceFormat: "musicxml" });
+      this.commitLoadSession();
     } catch (error) {
       if (generation !== this.generation || error?.name === "AbortError") return;
+      if (this.recoverLoadFailure(error, generation)) return;
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
@@ -367,8 +414,10 @@ export class HolographicHarmonyApp {
       );
       this.sourceNote.textContent = `${file.name} · analyzed locally · ${analysis.frameCount} frames · ${analysis.registeredNoteEvents.length} inferred registered-note events · inferred-from-audio evidence. Nothing was uploaded by Harmonic Savant.`;
       this.renderAt(0, true);
+      this.commitLoadSession(file);
     } catch (error) {
       if (generation !== this.generation) return;
+      if (this.recoverLoadFailure(error, generation)) return;
       console.error(error);
       this.status.textContent = "ERROR";
       this.fieldEl.textContent = error.message;
@@ -431,8 +480,10 @@ export class HolographicHarmonyApp {
       this.sourceNote.textContent = `${file.name} · ${parsed.notes.length} note events processed locally · ${prepared.sourceFormat.toUpperCase()} → MusicXML ready. ${evidenceText} Playback requires audio.`;
       this.renderAt(0, true);
       this.publishScoreFingerprint(parsed.eventsV1, { title: file.name, sourceId: `sha256:${hash}`, sourceFormat: prepared.sourceFormat });
+      this.commitLoadSession(file);
     } catch (error) {
       if (generation !== this.generation) return;
+      if (this.recoverLoadFailure(error, generation)) return;
       console.error(error);
       this.clearScoreExport(error.message);
       this.status.textContent = "ERROR";

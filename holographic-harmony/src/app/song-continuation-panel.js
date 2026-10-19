@@ -5,6 +5,7 @@ import { matchProgressionReferences, sharedProgressionDevices } from "../catalog
 import { readFeelingNotes, saveFeelingNote } from "../model/feeling-notes.js";
 import { parseChordSequence } from "../input/chord-sequence.js";
 import { pitchClassName } from "../theory/pitch.js";
+import { CompositionWorkbench } from "./composition-workbench.js";
 
 function el(tag, className = "", text = "") {
   const node = document.createElement(tag);
@@ -25,7 +26,7 @@ function button(text, action) {
 }
 
 export class SongContinuationPanel extends ContinuationPanel {
-  constructor(root, { getHolographicContext, onSeek = null, getScoreVoicing = null, storage = null } = {}) {
+  constructor(root, { getHolographicContext, onSeek = null, getScoreVoicing = null, getSourceEvidence = null, onAuditionStart = null, storage = null } = {}) {
     super(root, { getHolographicContext });
     this.onSeek = onSeek;
     this.getScoreVoicing = getScoreVoicing;
@@ -36,11 +37,12 @@ export class SongContinuationPanel extends ContinuationPanel {
     this.playbackTime = 0;
     this.manualProgression = this.progression.value;
     this.buildSongControls();
+    this.lab = new CompositionWorkbench(this, {getSourceEvidence:getSourceEvidence||(()=>null),onAuditionStart:onAuditionStart||(()=>{})});
     this.invalidate();
   }
 
   buildSongControls() {
-    this.engineBadge.textContent = "HHF-3.10";
+    this.engineBadge.textContent = "HHF-3.11";
     this.root.dataset.workbenchVersion = "song-workbench-v1";
     this.shell.open = true;
     this.root.querySelector(".hs-compose-subtitle").textContent = "Follow the song, choose a chord, explore what can come next";
@@ -102,6 +104,7 @@ export class SongContinuationPanel extends ContinuationPanel {
   }
 
   cancelAnalysis() {
+    this.lab?.audition.stop();
     this.requestId++;
     clearTimeout(this.workerTimeout);
     this.worker?.terminate(); this.worker = null;
@@ -136,9 +139,11 @@ export class SongContinuationPanel extends ContinuationPanel {
       this.progression.value = ""; this.actualNext.textContent = "Waiting for song analysis…";
       this.needsAnalysis = false;
     }
+    this.lab?.refresh();
   }
 
   invalidate() {
+    this.lab?.reset();
     this.cancelAnalysis();
     this.song = null; this.selectedIndex = -1; this.session = null; this.sessionOptions = null;
     this.selectedHolographic = null; this.playbackTime = 0;
@@ -154,6 +159,7 @@ export class SongContinuationPanel extends ContinuationPanel {
   }
 
   acceptSong(song, timeSeconds = 0) {
+    this.lab?.reset();
     this.cancelAnalysis();
     this.song = song;
     this.playbackTime = Number.isFinite(timeSeconds) ? timeSeconds : 0;
@@ -187,6 +193,7 @@ export class SongContinuationPanel extends ContinuationPanel {
     this.interpretation.replaceChildren(); this.interpretation.disabled = !region;
     this.feelingsControls.hidden = !region;
     if (!region) {
+      this.lab?.reset();
       this.selectedHolographic = null;
       this.position.textContent = "No sounding chord at the current position.";
       this.chordSlider.setAttribute("aria-valuetext", "No sounding chord");
@@ -219,6 +226,7 @@ export class SongContinuationPanel extends ContinuationPanel {
     this.refreshFeelingStatus();
     if (seek) this.onSeek?.(region.onset);
     this.selectedHolographic = this.getHolographicContext?.(region, this.song);
+    this.lab?.onSelection();
     this.updateSelectedProgression();
   }
 
@@ -243,7 +251,8 @@ export class SongContinuationPanel extends ContinuationPanel {
     return { progression: this.progression.value, currentVoicing: this.voicing.value.trim() || scoreVoicing?.join(" ") || "",
       contextTonic: this.contextTonic.value, systemId: this.system.value, targetTonic: this.targetTonic.value,
       activeField: holographic?.activeField ?? null, shadowField: holographic?.shadowField ?? null,
-      ranking: this.preset.value ? { preset: this.preset.value, missingPolicy: this.missingPolicy.value, limit: 6 } : null };
+      ranking: this.preset.value ? { preset: this.preset.value, missingPolicy: this.missingPolicy.value, limit: 6 } : null,
+      ...(this.lab?.options()||{}) };
   }
 
   request(request, done, failed) {
@@ -252,7 +261,8 @@ export class SongContinuationPanel extends ContinuationPanel {
     let worker;
     try { worker = this.worker = new Worker(new URL("../continuation/workbench-worker.js", import.meta.url), { type: "module" }); }
     catch (error) { this.cancelAnalysis(); throw error; }
-    const finish = () => { clearTimeout(this.workerTimeout); worker.terminate(); this.worker = null; this.runButton.disabled = false; };
+    const started=performance.now();
+    const finish = () => { this.lastWorkerDurationMs=performance.now()-started; clearTimeout(this.workerTimeout); worker.terminate(); this.worker = null; this.runButton.disabled = false; };
     worker.addEventListener("message", ({ data }) => {
       if (id !== this.requestId || worker !== this.worker || data.id !== id) return;
       finish();
@@ -284,7 +294,7 @@ export class SongContinuationPanel extends ContinuationPanel {
       if (this.sourceMode.value === "manual") this.renderReferenceMatches(parseChordSequence(options.progression).chords, 0, "Manual sketch");
       this.request({ type: "analyze", options }, result => {
         this.session = result.session; this.sessionOptions = options; this.exportButton.disabled = false;
-        this.render(result.session); this.actionStatus.textContent = "Ready · heuristic continuations";
+        this.render(result.session); this.actionStatus.textContent = `${result.session.composition ? "Ready · composition-context hypotheses" : "Ready · local-chord heuristic baseline"} · local worker ${this.lastWorkerDurationMs.toFixed(0)} ms`;
       }, message => this.showError(message));
       this.runButton.disabled = true;
     } catch (error) { this.showError(error.message); }
@@ -299,7 +309,9 @@ export class SongContinuationPanel extends ContinuationPanel {
     const functional = el("details", "hs-advanced");
     functional.append(el("summary", "", "Tonal context and functional translation"), this.renderContext(session), this.renderProgression(session));
     const candidates = el("section", "hs-result-card"); candidates.append(el("div", "hs-result-title", "What can go next?"),
-      el("div", "hs-small-note", `${session.ranking ? `Objective: ${session.ranking.preset}.` : "Unranked, deterministic source order."} Scores are indices out of 100. Corpus and learned style are unavailable without supporting data.`));
+      el("div", "hs-small-note", `${session.composition?`Active objective: ${session.composition.intention}. Local baseline remains available in the method selector.`:session.ranking ? `Objective: ${session.ranking.preset}.` : "Unranked, deterministic source order."} Scores are indices out of 100. Corpus and learned style are unavailable without supporting data.`));
+    if(session.composition) candidates.append(el("p","composition-scope",`${session.composition.intention}: ${session.composition.definition}`),
+      el("p","hs-small-note",`Weights: ${Object.entries(session.composition.weights).map(([k,v])=>`${k}=${v}`).join(" · ")}. ${session.composition.context.scope}`));
     for (const { entry, rank } of orderedContinuations(session)) {
       const row = el("article", "hs-continuation-row");
       const symbol = entry.presentation.symbol;
@@ -310,8 +322,11 @@ export class SongContinuationPanel extends ContinuationPanel {
       dimensions.textContent = [["functional", "Function"], ["voiceLeading", "Voice leading"], ["novelty", "Novelty"], ["holographicContinuity", "Holographic"]]
         .map(([key, name]) => `${name}: ${entry.dimensions[key].available ? `${Math.round(entry.dimensions[key].score * 100)}/100` : "unavailable"}`).join(" · ");
       row.append(dimensions);
+      if(rank?.composition){const evidence=el("details","composition-candidate-evidence");evidence.append(el("summary","","Inspect composition inputs and weighted scores"));
+        for(const [name,value]of Object.entries(rank.composition.dimensions))evidence.append(el("p","hs-small-note",`${name}: ${value.available?Math.round(value.score*100)+"/100":"unavailable"} · ${value.basis} · effective weight ${(rank.composition.effectiveWeights[name]||0).toFixed(3)}`));row.append(evidence);}
       const voice = entry.dimensions.voiceLeading;
-      if (voice.available && voice.bestVoicing?.length) row.append(el("div", "hs-best-voicing", `Closest voicing: ${voice.bestVoicing.map(midi => `${pitchClassName(midi % 12)}${Math.floor(midi / 12) - 1}`).join(" · ")} · ${voice.movementSemitones} semitones of total motion`));
+      if (voice.available && voice.bestVoicing?.length) row.append(el("div", "hs-best-voicing", `Generated closest voicing: ${voice.bestVoicing.map(midi => `${pitchClassName(midi % 12)}${Math.floor(midi / 12) - 1}`).join(" · ")} · ${voice.movementSemitones} semitones of total motion`));
+      if(this.lab)row.append(button(`Audition generated ${symbol}`,()=>this.lab.preview(entry,rank)));
       const branch = el("div", "hs-branch-results");
       const explore = button(`Where ${symbol} can lead`, () => {
         if (this.session !== session || !this.sessionOptions) return;
@@ -320,7 +335,16 @@ export class SongContinuationPanel extends ContinuationPanel {
           this.request({ type: "branch", chord: symbol, options: this.sessionOptions }, result => {
             if (this.pendingBranch === branch) this.pendingBranch = null;
             branch.replaceChildren(el("div", "hs-small-note", `Hypothetical: ${symbol} → … · ${result.context.source} ${result.context.centerName} ${result.context.systemName}`));
-            for (const item of result.continuations) branch.append(el("div", "hs-branch-item", `${symbol} → ${item.symbol} · ${item.roman || ""}${item.score == null ? "" : ` · ${Math.round(item.score * 100)}/100`} · ${item.explanation || ""}`));
+            for (const item of result.continuations) {
+              const itemRow=el("div","hs-branch-item",`${symbol} → ${item.symbol} · ${item.roman || ""}${item.score == null ? "" : ` · ${Math.round(item.score * 100)}/100`} · ${item.explanation || ""}`),third=el("div","hs-third-step");
+              itemRow.append(button(`Explore after ${symbol} → ${item.symbol}`,()=>{
+                if(this.session!==session||!this.sessionOptions)return;
+                third.textContent="Exploring a further hypothetical step…";
+                try{this.request({type:"branch",chord:`${symbol} | ${item.symbol}`,options:this.sessionOptions},next=>{
+                  third.replaceChildren();for(const last of next.continuations)third.append(el("p","hs-small-note",`Hypothetical: ${symbol} → ${item.symbol} → ${last.symbol} · ${last.explanation||""}`));
+                },message=>{third.textContent=`Step unavailable: ${message}`;});}catch(error){third.textContent=error.message;}
+              }),third);branch.append(itemRow);
+            }
           }, message => { if (this.pendingBranch === branch) this.pendingBranch = null; branch.textContent = `Branch unavailable: ${message}`; });
           this.pendingBranch = branch;
         } catch (error) { branch.textContent = error.message; }

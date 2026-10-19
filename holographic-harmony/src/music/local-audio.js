@@ -356,6 +356,7 @@ function downmixAudioBuffer(audioBuffer) {
 
 export async function analyzeLocalAudioFile(file, options = {}) {
   if (classifyLocalMusicFile(file) !== "audio") throw new TypeError("file is not recognized as audio");
+  if (Number(file.size) > 64 * 1024 * 1024) throw new RangeError("Audio file exceeds the64MiB local input limit");
   const { signal } = options;
   const checkCancelled = () => {
     if (!signal?.aborted) return;
@@ -375,14 +376,19 @@ export async function analyzeLocalAudioFile(file, options = {}) {
   signal?.addEventListener("abort", closeContext, { once: true });
   try {
     const bytes = await file.arrayBuffer();
+    if(bytes.byteLength > 64 * 1024 * 1024) throw new RangeError("Audio file exceeds the64MiB local input limit");
     checkCancelled();
     const sourceDigest = await crypto.subtle.digest("SHA-256", bytes);
     checkCancelled();
     const sourceId = `sha256:${Array.from(new Uint8Array(sourceDigest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
     const decoded = await context.decodeAudioData(bytes.slice(0));
     checkCancelled();
+    if(!Number.isFinite(decoded.length)||decoded.length<=0||decoded.length>32000000||decoded.length*Math.max(1,decoded.numberOfChannels)>64000000)throw new RangeError("Decoded audio exceeds the bounded32-million-frame/64-million-channel-sample budget");
     const mono = downmixAudioBuffer(decoded);
-    return Object.freeze({ ...analyzePcmChroma(mono, decoded.sampleRate, options), sourceId });
+    const {analyzePcmOffThread}=await import("./audio-worker-client.js");
+    const analysis=await analyzePcmOffThread(mono,decoded.sampleRate,options);
+    checkCancelled();
+    return Object.freeze({ ...analysis, sourceId });
   } catch (error) {
     checkCancelled();
     if (error?.name === "AbortError") throw error;
