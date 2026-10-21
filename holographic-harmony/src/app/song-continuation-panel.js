@@ -42,7 +42,7 @@ export class SongContinuationPanel extends ContinuationPanel {
   }
 
   buildSongControls() {
-    this.engineBadge.textContent = "HHF-3.11";
+    this.engineBadge.textContent = "HHF-3.12";
     this.root.dataset.workbenchVersion = "song-workbench-v1";
     this.shell.open = true;
     this.root.querySelector(".hs-compose-subtitle").textContent = "Follow the song, choose a chord, explore what can come next";

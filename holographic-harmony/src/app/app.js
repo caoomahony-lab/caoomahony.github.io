@@ -8,6 +8,8 @@ import { inferScaleCandidates, crystallizationSupport } from "../theory/inferenc
 import { pitchClassName } from "../theory/pitch.js";
 import { PitchCircle } from "../visualization/pitch-circle.js";
 import { HolographicTimeline } from "../visualization/timeline.js";
+import { NoteClockMemory, initialClockKey } from "../visualization/note-clock-state.js";
+import { NoteClockControls } from "./note-clock-controls.js";
 
 const LOCAL_TRACK_ID = "__local_music__";
 const LOCAL_FILE_ACCEPT = "audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.oga,.opus,.webm,.musicxml,.xml,.mxl,.mid,.midi";
@@ -97,6 +99,12 @@ export class HolographicHarmonyApp {
     const circleHost = create("div", "circle-host");
     circleCard.appendChild(circleHost);
     this.pitchCircle = new PitchCircle(circleHost);
+    const legend = create("div", "clock-legend");
+    for (const [kind, text] of [["key", "Key notes"], ["color", "Song color"], ["transient", "One-off flash"], ["sounding", "Sounding now"]]) {
+      const item = create("span", `clock-legend-item clock-legend-${kind}`);
+      item.append(create("i", ""), document.createTextNode(text)); legend.append(item);
+    }
+    circleCard.append(legend);
 
     const side = create("aside", "diagnostics");
     side.innerHTML = `
@@ -114,6 +122,12 @@ export class HolographicHarmonyApp {
     this.orderEl = side.querySelector("[data-order]");
     this.candidatesEl = side.querySelector("[data-candidates]");
     this.crystallizationEl = side.querySelector("[data-crystallization]");
+    this.noteClockControls = new NoteClockControls({getSession: () => {
+      if (!this.currentTrack) return null;
+      this.noteClockAt(Math.max(0, this.lastRenderTime)); return this.noteClockSession;
+    }, onChange: () => this.renderAt(Math.max(0, this.lastRenderTime), true)});
+    this.pitchCircle.onSelect = pc => this.noteClockControls.selectNote(pc);
+    side.prepend(this.noteClockControls.root);
     visualGrid.append(circleCard, side);
 
     const transport = create("section", "transport");
@@ -223,7 +237,7 @@ export class HolographicHarmonyApp {
   captureLoadSession() {
     if (!this.currentTrack || !this.notes?.length) return null;
     const keys = ["currentTrack", "notes", "activeField", "shadowField", "duration", "localObjectUrl", "scoreExport", "scoreSourceId",
-      "audioSourceId", "currentCollection", "audioHarmony", "scoreHarmony", "harmonicIR", "currentHarmonicState", "audioReferenceScore", "audioScoreComparison", "currentLocalFile"];
+      "audioSourceId", "currentCollection", "audioHarmony", "scoreHarmony", "harmonicIR", "currentHarmonicState", "audioReferenceScore", "audioScoreComparison", "currentLocalFile", "noteClockSession"];
     return { state: Object.fromEntries(keys.map(key => [key, this[key]])), time: Math.max(0, this.lastRenderTime ?? this.audio.currentTime ?? 0),
       audioSrc: this.currentTrack.audio || "", playDisabled: this.playButton.disabled,
       sourceText: this.sourceNote.textContent, modeText: this.modeBadge.textContent, converterText: this.converterStatus?.textContent };
@@ -307,7 +321,10 @@ export class HolographicHarmonyApp {
     this.status.textContent = status;
     this.currentTrack = null;
     this.scoreSourceId = null;
+    this.audioSourceId = null;
     this.notes = [];
+    this.noteClockSession = null;
+    this.noteClockControls?.clear();
     this.activeField = [];
     this.shadowField = [];
     this.duration = 0;
@@ -387,6 +404,7 @@ export class HolographicHarmonyApp {
       if (generation !== this.generation) return;
       const overallCandidate = inferScaleCandidates(analysis.overallChroma, 1)[0];
       this.notes = [...analysis.events];
+      this.audioSourceId = analysis.sourceId;
       this.activeField = overallCandidate?.pcs ? [...overallCandidate.pcs] : [0, 2, 4, 5, 7, 9, 11];
       this.shadowField = complementField(this.activeField);
       const partition = validatePartition(this.activeField, this.shadowField);
@@ -507,6 +525,10 @@ export class HolographicHarmonyApp {
 
   publishScoreFingerprint(events, { title, sourceId, sourceFormat }) {
     this.scoreSourceId = sourceId;
+    if (this.noteClockSession) {
+      this.noteClockControls?.attach(this.noteClockSession, sourceId);
+      this.renderAt(Math.max(0, this.lastRenderTime), true);
+    }
     this.root.dispatchEvent(new CustomEvent("harmonic-savant:score-ready", {
       bubbles: true, detail: { events, title, sourceId, sourceFormat,
         analysisOptions: { referenceCenterPc: this.currentTrack?.analysis?.field?.center ?? null,
@@ -545,13 +567,27 @@ export class HolographicHarmonyApp {
     this.raf = null;
   }
 
+  noteClockAt(timeSeconds) {
+    if (this.noteClockSession?.notes !== this.notes) {
+      this.noteClockSession = { notes: this.notes, model: new NoteClockMemory(this.notes,
+        initialClockKey(this.notes, this.currentTrack?.analysis?.field)), sourceId: null, time: timeSeconds };
+    }
+    const session = this.noteClockSession;
+    session.time = timeSeconds;
+    const sourceId = this.currentTrack?.local ? this.audioSourceId || this.scoreSourceId : `demo:${this.currentTrack?.id}`;
+    this.noteClockControls?.attach(session, sourceId);
+    const snapshot = session.model.at(timeSeconds);
+    this.noteClockControls?.update(session, snapshot);
+    return snapshot;
+  }
+
   renderAt(timeSeconds, force = false) {
     if (!this.currentTrack) return;
     if (!force && Math.abs(timeSeconds - this.lastRenderTime) < 1 / 45) return;
     this.lastRenderTime = timeSeconds;
 
     const activity = computePitchClassActivity(this.notes, timeSeconds, this.currentTrack.analysis?.activity);
-    let activeField = this.activeField;
+    let activeField = this.currentTrack.analysis?.field?.pcs || this.activeField;
     let currentFieldLabel = this.currentTrack.analysis?.field?.name || "Defined field";
     const candidates = inferScaleCandidates(activity.raw, 4);
 
@@ -560,6 +596,13 @@ export class HolographicHarmonyApp {
       this.activeField = activeField;
       this.shadowField = complementField(activeField);
       currentFieldLabel = candidates[0].label;
+    }
+    const clock = this.noteClockAt(timeSeconds);
+    const memoryView = this.noteClockControls.view.value !== "legacy";
+    if (memoryView) {
+      activeField = clock.key.pcs;
+      currentFieldLabel = `${clock.key.label} · ${clock.key.basis}`;
+      this.activeField = [...activeField]; this.shadowField = complementField(activeField);
     }
     const shadowField = complementField(activeField);
     const admissions = computeAdmissionHistory(this.notes, shadowField, timeSeconds);
@@ -577,7 +620,8 @@ export class HolographicHarmonyApp {
       events: this.notes,
       timeSeconds,
       fieldLabel: currentFieldLabel,
-      crystallization
+      crystallization,
+      clock: memoryView ? clock : null
     });
 
     this.fieldEl.textContent = currentFieldLabel;

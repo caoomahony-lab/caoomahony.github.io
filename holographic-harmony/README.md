@@ -64,3 +64,14 @@ Each load increments a generation token, aborts the previous fetch, pauses playb
 ## Current limitations
 
 This release does not perform audio-only polyphonic transcription. MusicXML is authoritative for pitches and score timing. Candidate center/scale inference is deliberately lightweight and should be treated as analytical assistance rather than ground truth.
+
+
+## Note clock · HHF-3.12
+
+The default clock separates the song's key, sounding pitches and remembered chromatic use. Key notes remain red, the tonic has an extra red ring, and sounding notes have a separate pale outline. Outside notes flash white on their first entrance. After two separate entrances they retain an amber song-color marker, even through long rests; this is evidence of repeated use, not a claim of harmonic function or a mistake detector. Simultaneous octave/voice doubling and tied continuations do not inflate recurrence. Backward seeking reconstructs the history only through that position.
+
+Select a note on the clock or open “Key & note roles.” “Song color” retains an intentional single-use note after its first use; “Transient / mistake” excludes that pitch class from automatic memory. This classification is a user interpretation for the pitch class across the composition, not an automatic deletion or correction of a particular performance event. Original score/audio evidence and canonical admissions stay unchanged.
+
+The key starts from a declared reference when available, otherwise the existing opening-window estimator, explicitly labeled editable. Passing tones, borrowed chords and local hypotheses do not automatically change it. “Set song key” chooses the reference for the whole composition. “Confirm modulation here” records a new reference from the selected playback time, preserving earlier sections. This release does not claim automatic validated modulation detection. Undo and reset are available. The original adaptive field remains under the Clock view selector.
+
+Clock choices are saved per source ID in `harmonic-savant:note-clock-choices:v1` and included by the existing workspace backup. Invalid/unknown stored records and failed writes are reported rather than silently overwritten. No music is uploaded by the clock. These view choices do not rewrite frozen fingerprint/HIR exports or tune comparison results.

@@ -295,3 +295,49 @@ select {
 .reference-result>summary{cursor:pointer;padding:12px;color:#dcecff;font-size:13px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
 .reference-result .score-comparison-card{border:0;border-top:1px solid #203b58;border-radius:0}
 @media(max-width:520px){.reference-catalog-controls .pairwise-mode{max-width:none}.reference-catalog-controls select{max-width:100%}.reference-catalog-controls>button{width:100%}}
+
+/* The clock's membership, memory and live sound are separate visual layers. */
+.circle-card { display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 4px; }
+.circle-host { min-height: 0; }
+.clock-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; padding: 6px 8px 10px; color: #b9cbe1; font-size: 12px; }
+.clock-legend-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.clock-legend-item i { width: 11px; height: 11px; display: inline-block; border-radius: 50%; }
+.clock-legend-key i { background: #ac3653; border: 1px solid #ff728f; }
+.clock-legend-color i { background: #9b681f; border: 1px solid #ffca72; }
+.clock-legend-transient i { background: #f4f7fa; }
+.clock-legend-sounding i { background: transparent; border: 2px solid #e5f2ff; }
+.pitch-node { cursor: pointer; outline: none; }
+.pitch-hit { fill: transparent; stroke: transparent; pointer-events: all; }
+.pitch-node:focus-visible .pitch-hit { stroke: #f4f7fa; stroke-width: 2; stroke-dasharray: 3 4; }
+.pitch-sounding, .pitch-tonic { fill: none; opacity: 0; pointer-events: none; }
+.pitch-node.is-sounding .pitch-sounding { opacity: 1; stroke: #e5f2ff; stroke-width: 2.5; }
+.pitch-node.is-tonic .pitch-tonic { opacity: 1; stroke: #ff728f; stroke-width: 2; }
+.pitch-node.is-song-color .pitch-disc { stroke: #ffca72; stroke-width: 2; }
+.pitch-node.is-song-color .pitch-label { fill: #fff2d8; }
+.pitch-badge { fill: #ffca72; font-size: 13px; letter-spacing: .02em; font-weight: 700; pointer-events: none; }
+.pitch-node.is-tonic .pitch-badge { fill: #ff8ba3; font-size: 10px; letter-spacing: .10em; }
+.clock-memory-view .pitch-disc { transition: fill 100ms linear; }
+.clock-memory-view .pitch-label { font-size: 20px; }
+.clock-memory-view .is-shadow:not(.is-song-color):not(.is-flashing) .pitch-label { fill: #94afcf; }
+.clock-memory-view .center-title { font-size: 12px; letter-spacing: .14em; }
+.clock-memory-view .center-primary { fill: #ff8ba3; font-size: 24px; }
+.clock-memory-view .center-secondary { font-size: 10px; letter-spacing: .03em; }
+.clock-controls { border-bottom: 1px solid #203b58; padding-bottom: 12px; }
+.clock-key-label { color: #ff8ba3; font-size: 23px; font-weight: 750; margin-top: 5px; }
+.clock-small, .clock-colors { font-size: 12px; line-height: 1.55; color: #b1c5df; margin: 7px 0; overflow-wrap: anywhere; }
+.clock-colors { color: #ffd699; }
+.clock-edit { margin-top: 10px; }
+.clock-edit summary { cursor: pointer; color: #d5e4f8; padding: 8px 0; font-size: 13px; }
+.clock-control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.clock-control { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 8px 0; }
+.clock-control select { width: 100%; min-width: 0; font-size: 14px; min-height: 44px; }
+.clock-control .control-label { font-size: 10px; letter-spacing: .06em; }
+.clock-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.clock-actions button { min-height: 44px; padding: 8px 10px; border: 1px solid #345575; border-radius: 9px; background: #102238; color: #e5efff; font-size: 12px; cursor: pointer; }
+.clock-actions button:disabled { opacity: .45; cursor: default; }
+@media (max-width:800px) { .clock-controls { grid-column: 1 / -1; } }
+@media (max-width:520px) {
+  .clock-control-grid { grid-template-columns: 1fr; }
+  .clock-control select { font-size: 16px; }
+  .clock-legend { font-size: 11px; gap: 7px 12px; }
+}

@@ -460,7 +460,7 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
     this.lastRenderTime = timeSeconds;
 
     let activity = computePitchClassActivity(this.notes, timeSeconds, this.currentTrack.analysis?.activity);
-    let activeField = this.activeField;
+    let activeField = this.currentTrack.analysis?.field?.pcs || this.activeField;
     let currentFieldLabel = this.currentTrack.analysis?.field?.name || "Defined field";
     let candidates = inferScaleCandidates(activity.raw, 4);
     const adaptive = this.currentTrack.analysis?.mode === "adaptive";
@@ -484,6 +484,16 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       if (this.primaryDiagnosticLabel) this.primaryDiagnosticLabel.textContent = "CURRENT COLLECTION";
     } else if (this.primaryDiagnosticLabel) {
       this.primaryDiagnosticLabel.textContent = "CURRENT FIELD";
+    }
+
+    const clock = this.noteClockAt(timeSeconds);
+    const memoryView = this.noteClockControls.view.value !== "legacy";
+    if (memoryView) {
+      activeField = clock.key.pcs;
+      currentFieldLabel = `${clock.key.label} · ${clock.key.basis}`;
+      this.activeField = [...activeField];
+      this.shadowField = complementField(activeField);
+      if (this.primaryDiagnosticLabel) this.primaryDiagnosticLabel.textContent = "SONG KEY REFERENCE";
     }
 
     let shadowField = complementField(activeField);
@@ -514,7 +524,8 @@ export class CollectionAwareHolographicHarmonyApp extends HolographicHarmonyApp 
       events: this.notes,
       timeSeconds,
       fieldLabel: circleLabel,
-      crystallization
+      crystallization,
+      clock: memoryView ? clock : null
     });
 
     this.fieldEl.textContent = currentFieldLabel;
